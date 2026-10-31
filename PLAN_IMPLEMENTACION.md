@@ -249,6 +249,81 @@ sigue pendiente, por lo que la entrega no se declara cerrada.
 
 Actualizar aquí fecha, commit, alcance, pruebas ejecutadas y limitaciones por entrega. No marcar completado un conector por existir en código ni un dashboard por tener datos simulados.
 
+31-10-2026 (continuación desde `be07563`): se corrigió el flujo de
+restauración del asistente. Si el usuario edita el borrador después de aceptar
+una propuesta, debe confirmar antes de reemplazar esas ediciones; cancelar
+mantiene el texto actual. La prueba de regresión verifica ambas opciones.
+`ContentAssistantPanel` pasó `6 tests`.
+
+Verificación aislada de este cambio:
+
+- Vitest focalizado: `6/6` con `--pool=threads --maxWorkers=1` y
+  `--fsModuleCachePath=/tmp/rsmanager-vitest-cache`; el destino está en el
+  `tmpfs` de pruebas, no en el volumen de dependencias de solo lectura.
+- Oxfmt pasó en los dos archivos modificados; Oxlint pasó en esos archivos con
+  `0 warnings, 0 errors`; `tsc --noEmit` terminó con código 0.
+- Build aislado: `9315` módulos transformados y build completado en `13m 6s`.
+  El manifest y los assets quedaron en el `tmpfs` efímero; no se activaron en
+  la aplicación local. Vite avisó del loader de configuración, la dependencia
+  opcional `fontaine` y chunks mayores de 500 kB; el build terminó correctamente.
+- El pool `forks` agotó su espera de inicio de worker con Bun; el pool `threads`
+  evitó ese problema. El primer intento con `threads` reveló que Vitest intentaba
+  crear `.vitest-cache` en `node_modules` de solo lectura. Sin cambiar ese
+  volumen, se redirigió el caché a `/tmp` y las seis pruebas pasaron.
+- Los dos fallos Vitest previamente registrados también se clasificaron con
+  pruebas focalizadas en una copia temporal de `resources/js`.
+  `inertia-cache-policy` pasó `10 tests` y `build-feedback-payload` `3 tests`
+  (`13/13`, `5.62s` en total). La primera recorre y lee todo `resources/js`;
+  el timeout previo corresponde al acceso lento del bind mount Windows, no a
+  una infracción de política. La segunda compara el tipo MIME sin sus
+  parámetros, por lo que un `charset` opcional no cambia el payload esperado.
+
+Matriz de estado interno revisada:
+
+| Requisito | Implementación y prueba registrada | Pendiente |
+| --- | --- | --- |
+| Entrega 3: filtros, cobertura, `null`/cero, CSV e impresión | Dashboard y reportes comparten filtros/workspace; Pest `23 tests, 395 assertions` y Vitest `13 tests` aislados | Recorrido visual con series sintéticas y comprobación del navegador |
+| Entrega 4: propuesta, edición, aceptación y conservación del borrador | Adaptador simulado, revisión humana y protección contra sobrescritura; Vitest focalizado `6/6` | Revisión visual aislada y proveedor real, reservada para la fase final |
+| Entrega 5: campañas, UTM, etapas y permisos | Núcleo interno y políticas por workspace; `SalesModuleTest` y prueba de UI registrados en los lotes aislados previos | Revisión visual; no hay atribución, ingresos ni integración CRM externa |
+| Entrega 6: planes publicitarios sin activación | Borradores Meta, presupuesto planeado, estado de revisión y sin ruta de publicación; `AdPlanTest` y prueba de UI registrados previamente | Revisión visual y autorización real del proveedor; no hay gasto ni campañas externas |
+
+La inspección de la instancia visual sigue sin evidencia de navegador. El
+contenedor desechable quedó `healthy` y escucha en `0.0.0.0:8080`; Compose
+declara `127.0.0.1:18081`, pero `docker inspect` muestra `NetworkSettings.Ports`
+vacío y `docker ps` solo anuncia `8080/tcp`. El navegador integrado recibió
+`ERR_CONNECTION_REFUSED` en `http://localhost:18081`. Por tanto, el servidor
+arrancó, pero Docker Desktop no publicó el puerto hacia Windows. Se conserva
+la red `internal` y no se expone el servicio con una red pública para sortearlo.
+Los `tmpfs` de Vite y `set -e` evitan escribir en `node_modules` de solo
+lectura y evitan continuar si falla el build. No se cargaron fixtures ni se
+afectó la aplicación operativa; la revisión visual sigue pendiente.
+
+La suma de los lotes Pest registrados es `1677 Feature + 402 Unit = 2079`, que
+coincide aritméticamente con la ejecución interrumpida de `2051 aprobados + 28
+fallidos`. Los manifiestos de rutas por lote y los omitidos no se conservaron;
+por tanto, no se puede certificar cobertura sin huecos ni doble conteo. La
+ejecución adicional de `SalesModuleTest` (`6 tests, 49 assertions`) se solapa
+con esos lotes y no se suma de nuevo. No se repitió Pest.
+
+La medición aislada encontró `vendor` de 305 MiB, unos 3.2 MiB en los
+directorios PHP analizados, `/tmp` de 512 MiB vacío al inicio y sin límite de
+memoria en cgroup. No hay evidencia de OOM ni de que el espacio temporal fuera
+el límite. Para evitar lecturas del bind mount Windows, se copió a `/tmp`
+exactamente el alcance de `phpstan.neon` (`app`, `bootstrap/app.php`,
+`config`, `database` y `routes`) y se enlazó el `vendor` de solo lectura.
+PHPStan 2.3.1, nivel 7, analizó los 570 archivos y terminó `[OK] No errors`;
+no se excluyeron rutas ni se cambió la configuración del análisis. La
+ejecución directa usó un límite de memoria de 1 GiB. La ejecución aislada de
+`composer types:check`, con el límite de 512 MiB definido por el script,
+terminó por el `process-timeout` predeterminado de Composer a los 300 s,
+mostrando `0/570` y sin emitir errores PHPStan. No se aumentó ese timeout ni
+se repitió el análisis. Por tanto, el análisis directo completo pasó, pero el
+wrapper exacto sigue inconcluso y no se marca aprobado. El uso lento del bind
+mount Windows es una causa plausible del timeout anterior, no una causa
+demostrada; la copia a `tmpfs` elimina esa ruta de I/O, aunque el wrapper aún
+supera su límite. Entregas 3–6 no se declaran cerradas ni desplegadas
+localmente.
+
 30-10-2026: Se corrigió en la interfaz de CRM que miembros sin permiso de
 gestión pudieran editar campañas existentes: los controles de actualización
 ahora quedan deshabilitados y la prueba de permisos lo verifica. QA aislado:

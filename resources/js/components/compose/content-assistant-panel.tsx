@@ -33,6 +33,8 @@ export function ContentAssistantPanel({
     const [isGenerating, setIsGenerating] = useState(false);
     const [confirmReplacement, setConfirmReplacement] = useState(false);
     const [previousDraft, setPreviousDraft] = useState<string | null>(null);
+    const [appliedDraft, setAppliedDraft] = useState<string | null>(null);
+    const [confirmRestore, setConfirmRestore] = useState(false);
     const [generatedBrief, setGeneratedBrief] = useState<string | null>(null);
     const [generatedDraft, setGeneratedDraft] = useState<string | null>(null);
 
@@ -103,6 +105,8 @@ export function ContentAssistantPanel({
         }
 
         setPreviousDraft(currentDraft);
+        setAppliedDraft(suggestion);
+        setConfirmRestore(false);
         onApply(suggestion);
         setConfirmReplacement(false);
         setNotice(
@@ -115,8 +119,27 @@ export function ContentAssistantPanel({
             return;
         }
 
+        if (currentDraft !== appliedDraft) {
+            setConfirmRestore(true);
+            setNotice(
+                'The draft changed after the suggestion was applied. Confirm restoring to replace those edits.',
+            );
+
+            return;
+        }
+
+        confirmPreviousDraftRestore();
+    }
+
+    function confirmPreviousDraftRestore() {
+        if (previousDraft === null) {
+            return;
+        }
+
         onApply(previousDraft);
         setPreviousDraft(null);
+        setAppliedDraft(null);
+        setConfirmRestore(false);
         setNotice('The previous draft was restored.');
     }
 
@@ -237,13 +260,45 @@ export function ContentAssistantPanel({
                             )}
                             {previousDraft !== null &&
                                 previousDraft.trim() !== '' && (
-                                    <button
-                                        type="button"
-                                        onClick={restorePreviousDraft}
-                                        className="rounded-md border border-border px-3 py-1.5 text-sm font-medium"
-                                    >
-                                        Restore previous draft
-                                    </button>
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={restorePreviousDraft}
+                                            className="rounded-md border border-border px-3 py-1.5 text-sm font-medium"
+                                        >
+                                            Restore previous draft
+                                        </button>
+                                        {confirmRestore && (
+                                            <div
+                                                role="alert"
+                                                className="flex flex-wrap items-center gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3"
+                                            >
+                                                <span className="mr-auto text-sm">
+                                                    Restoring replaces edits
+                                                    made after applying the
+                                                    suggestion.
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setConfirmRestore(false)
+                                                    }
+                                                    className="rounded-md border border-border px-3 py-1.5 text-sm"
+                                                >
+                                                    Keep current edits
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={
+                                                        confirmPreviousDraftRestore
+                                                    }
+                                                    className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+                                                >
+                                                    Confirm restore
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                         </>
                     )}

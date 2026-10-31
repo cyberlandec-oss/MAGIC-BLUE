@@ -68,6 +68,7 @@ services:
             - /bin/sh
             - -lc
             - |
+                set -e
                 mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/app/private
                 bun run build
                 touch /tmp/rsmanager-visual.sqlite
@@ -116,6 +117,8 @@ services:
               read_only: true
         tmpfs:
             - /tmp:rw,noexec,nosuid,size=512m
+            - /var/www/html/node_modules/.vite-temp:rw,noexec,nosuid,size=16m,mode=1777
+            - /var/www/html/node_modules/.vite:rw,noexec,nosuid,size=32m,mode=1777
             - /var/www/html/bootstrap/cache:rw,noexec,nosuid,size=16m
             - /var/www/html/storage:rw,noexec,nosuid,size=64m
             - /var/www/html/public/build:rw,noexec,nosuid,size=512m,mode=1777

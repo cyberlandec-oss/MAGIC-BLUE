@@ -7,15 +7,14 @@ describe('ContentAssistantPanel', () => {
     it('keeps the simulated suggestion editable until a human applies it', async () => {
         const onApply = vi.fn();
 
-        render(
-            <ContentAssistantPanel
-                platform="linkedin"
-                initialBrief="A product update"
-                currentDraft="A product update"
-                disabled={false}
-                onApply={onApply}
-            />,
-        );
+        const props = {
+            platform: 'linkedin' as const,
+            initialBrief: 'A product update',
+            currentDraft: 'A product update',
+            disabled: false,
+            onApply,
+        };
+        const { rerender } = render(<ContentAssistantPanel {...props} />);
 
         fireEvent.click(
             screen.getByRole('button', { name: /writing assistant/i }),
@@ -55,6 +54,12 @@ describe('ContentAssistantPanel', () => {
 
         expect(onApply).toHaveBeenCalledOnce();
         expect(onApply).toHaveBeenCalledWith('Reviewed and edited copy');
+        rerender(
+            <ContentAssistantPanel
+                {...props}
+                currentDraft="Reviewed and edited copy"
+            />,
+        );
         expect(
             screen.getByRole('button', { name: 'Restore previous draft' }),
         ).toBeInTheDocument();
@@ -67,6 +72,65 @@ describe('ContentAssistantPanel', () => {
         expect(
             screen.getByText(/previous draft was restored/i),
         ).toBeInTheDocument();
+    });
+
+    it('confirms before restoring over edits made after applying a suggestion', async () => {
+        const onApply = vi.fn();
+        const props = {
+            platform: 'linkedin' as const,
+            initialBrief: 'Original draft',
+            currentDraft: 'Original draft',
+            disabled: false,
+            onApply,
+        };
+        const { rerender } = render(<ContentAssistantPanel {...props} />);
+
+        fireEvent.click(
+            screen.getByRole('button', { name: /writing assistant/i }),
+        );
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Generate simulated suggestion',
+            }),
+        );
+        await screen.findByRole('textbox', { name: 'Editable suggestion' });
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Review and apply to draft',
+            }),
+        );
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Confirm replacement' }),
+        );
+
+        rerender(
+            <ContentAssistantPanel
+                {...props}
+                currentDraft="A newer unsaved edit"
+            />,
+        );
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Restore previous draft' }),
+        );
+
+        expect(onApply).toHaveBeenCalledOnce();
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            /replaces edits made after applying/i,
+        );
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Keep current edits' }),
+        );
+        expect(onApply).toHaveBeenCalledOnce();
+
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Restore previous draft' }),
+        );
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Confirm restore' }),
+        );
+
+        expect(onApply).toHaveBeenCalledTimes(2);
+        expect(onApply).toHaveBeenLastCalledWith('Original draft');
     });
 
     it('does not offer generated copy for threaded posts', () => {
