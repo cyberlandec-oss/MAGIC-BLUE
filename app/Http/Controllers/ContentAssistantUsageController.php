@@ -18,12 +18,14 @@ class ContentAssistantUsageController extends Controller
 {
     public function reserve(ContentAssistantReserveRequest $request, ContentAssistantUsageService $service): JsonResponse
     {
+        $data = $request->validated();
+
         try {
             $generation = $service->reserve(
                 $request->user(),
-                Platform::from($request->validated('platform')),
-                $request->validated('brief'),
-                $request->validated('idempotency_key'),
+                Platform::from((string) $data['platform']),
+                (string) $data['brief'],
+                (string) $data['idempotency_key'],
             );
         } catch (AssistantQuotaExceeded $exception) {
             return response()->json(['message' => $exception->getMessage()], Response::HTTP_TOO_MANY_REQUESTS);
@@ -39,11 +41,12 @@ class ContentAssistantUsageController extends Controller
 
     public function complete(ContentAssistantCompleteRequest $request, string $generation, ContentAssistantUsageService $service): JsonResponse
     {
+        $data = $request->validated();
         $model = ContentAssistantGeneration::query()
             ->where('workspace_id', $request->user()->current_workspace_id)
             ->findOrFail($generation);
 
-        $completed = $service->complete($model, $request->validated('suggestion'), (bool) $request->validated('accepted'));
+        $completed = $service->complete($model, (string) $data['suggestion'], (bool) $data['accepted']);
 
         return response()->json(['generation_id' => $completed->id, 'status' => $completed->status]);
     }
