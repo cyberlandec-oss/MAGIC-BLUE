@@ -16,6 +16,11 @@ use Illuminate\Http\Request;
 
 class ContentAssistantUsageController extends Controller
 {
+    public function quota(Request $request, ContentAssistantUsageService $service): JsonResponse
+    {
+        return response()->json($service->quota($request->user()));
+    }
+
     public function reserve(ContentAssistantReserveRequest $request, ContentAssistantUsageService $service): JsonResponse
     {
         $data = $request->validated();

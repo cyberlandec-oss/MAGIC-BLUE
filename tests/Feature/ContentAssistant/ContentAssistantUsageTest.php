@@ -6,6 +6,7 @@ use App\Models\ContentAssistantGeneration;
 use App\Models\UsageEvent;
 use App\Models\User;
 use App\Services\ContentAssistant\ContentAssistantUsageService;
+use Carbon\CarbonImmutable;
 
 beforeEach(function (): void {
     config()->set('instance.defaults.usage_tracking_enabled', true);
@@ -59,4 +60,32 @@ it('enforces the workspace monthly quota without affecting another workspace', f
         ->toThrow(AssistantQuotaExceeded::class);
     expect($service->reserve($otherUser, Platform::Facebook, 'brief', 'other-request'))
         ->toBeInstanceOf(ContentAssistantGeneration::class);
+});
+
+it('expires abandoned reservations and prevents completing a released reservation', function () {
+    $user = User::factory()->withWorkspace()->create();
+    $service = app(ContentAssistantUsageService::class);
+    $generation = $service->reserve($user, Platform::Facebook, 'brief', 'abandoned-request');
+    $generation->update(['reserved_at' => CarbonImmutable::now()->subMinutes(31)]);
+
+    expect($service->quota($user)['used'])->toBe(0);
+    expect($generation->refresh()->status)->toBe('released');
+
+    $service->complete($generation, 'suggestion', true);
+
+    expect($generation->refresh()->status)->toBe('released')
+        ->and(UsageEvent::count())->toBe(0);
+});
+
+it('charges a reservation to the month in which it was created', function () {
+    $user = User::factory()->withWorkspace()->create();
+    $service = app(ContentAssistantUsageService::class);
+    $generation = $service->reserve($user, Platform::LinkedIn, 'brief', 'cross-month-request');
+    $generation->update(['created_at' => CarbonImmutable::now()->subMonth()]);
+
+    $service->complete($generation, 'suggestion', false);
+
+    expect($generation->refresh()->status)->toBe('completed')
+        ->and($service->quota($user)['used'])->toBe(0)
+        ->and(UsageEvent::count())->toBe(1);
 });

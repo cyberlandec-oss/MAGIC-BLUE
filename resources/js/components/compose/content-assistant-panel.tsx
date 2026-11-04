@@ -13,6 +13,12 @@ type Props = {
     currentDraft: string;
     disabled: boolean;
     onApply: (text: string) => void;
+    usage?: {
+        quota: { limit: number; used: number; remaining: number } | null;
+        reserve: (platform: string, brief: string) => Promise<{ generation_id: string; provider: string; status: string }>;
+        complete: (id: string, suggestion: string, accepted: boolean) => Promise<void>;
+        release: (id: string) => Promise<void>;
+    };
     assistant?: ContentAssistantAdapter;
 };
 
@@ -22,6 +28,7 @@ export function ContentAssistantPanel({
     currentDraft,
     disabled,
     onApply,
+    usage,
     assistant = simulatedContentAssistant,
 }: Props) {
     const briefId = useId();
@@ -35,6 +42,7 @@ export function ContentAssistantPanel({
     const [previousDraft, setPreviousDraft] = useState<string | null>(null);
     const [appliedDraft, setAppliedDraft] = useState<string | null>(null);
     const [confirmRestore, setConfirmRestore] = useState(false);
+    const [generationId, setGenerationId] = useState<string | null>(null);
     const [generatedBrief, setGeneratedBrief] = useState<string | null>(null);
     const [generatedDraft, setGeneratedDraft] = useState<string | null>(null);
 
@@ -42,10 +50,32 @@ export function ContentAssistantPanel({
         setIsGenerating(true);
         setConfirmReplacement(false);
 
+        let reservedId: string | null = null;
+        if (usage) {
+            if (usage.quota?.remaining === 0) {
+                setNotice('Monthly assistant quota reached.');
+                setIsGenerating(false);
+                return;
+            }
+
+            try {
+                reservedId = (await usage.reserve(platform, brief)).generation_id;
+                setGenerationId(reservedId);
+            } catch {
+                setNotice('The assistant quota could not be reserved. Your draft was not changed.');
+                setIsGenerating(false);
+                return;
+            }
+        }
+
         let response: ContentAssistantResult;
         try {
             response = await assistant.generate(brief, platform);
         } catch {
+            if (reservedId && usage) {
+                await usage.release(reservedId);
+                setGenerationId(null);
+            }
             setSuggestion('');
             setNotice(
                 'The assistant could not generate a suggestion. Your draft was not changed.',
@@ -58,6 +88,10 @@ export function ContentAssistantPanel({
         setIsGenerating(false);
 
         if (response.status === 'empty_brief') {
+            if (reservedId && usage) {
+                await usage.release(reservedId);
+                setGenerationId(null);
+            }
             setSuggestion('');
             setNotice('Enter a brief before generating a suggestion.');
 
@@ -65,6 +99,10 @@ export function ContentAssistantPanel({
         }
 
         if (response.status === 'unavailable') {
+            if (reservedId && usage) {
+                await usage.release(reservedId);
+                setGenerationId(null);
+            }
             setSuggestion('');
             setNotice(
                 'The simulated assistant is unavailable. Your draft was not changed.',
@@ -81,7 +119,7 @@ export function ContentAssistantPanel({
         );
     }
 
-    function applySuggestion() {
+    async function applySuggestion() {
         if (suggestion.trim() === '') {
             return;
         }
@@ -108,6 +146,10 @@ export function ContentAssistantPanel({
         setAppliedDraft(suggestion);
         setConfirmRestore(false);
         onApply(suggestion);
+        if (generationId && usage) {
+            await usage.complete(generationId, suggestion, true);
+            setGenerationId(null);
+        }
         setConfirmReplacement(false);
         setNotice(
             'Applied to the draft editor. Nothing was published; you can restore the previous draft.',

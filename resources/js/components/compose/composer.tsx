@@ -7,6 +7,7 @@ import WorkspaceMentionController from '@/actions/App/Http/Controllers/Workspace
 import { useConfirm } from '@/components/common/confirm-dialog';
 import { AtSign, Eye, Pin, Plug, TriangleAlert } from '@/components/ui/icons';
 import { useAutosave } from '@/hooks/compose/use-autosave';
+import { useContentAssistantUsage } from '@/hooks/compose/use-content-assistant-usage';
 import { useEmojiPreferences } from '@/hooks/compose/use-emoji-preferences';
 import { useImageEditor } from '@/hooks/compose/use-image-editor';
 import { useMediaUploads } from '@/hooks/compose/use-media-uploads';
@@ -187,6 +188,7 @@ export default function Composer({
     initialSavedMentions = EMPTY_SAVED_MENTIONS,
     onSaved,
 }: ComposerProps) {
+    const contentAssistantUsage = useContentAssistantUsage();
     const schedulingTz = useSchedulingTimezone();
     const confirm = useConfirm();
     const { shell } = usePage().props;
@@ -1271,6 +1273,7 @@ export default function Composer({
                         onApply={(text) =>
                             handleSegments([text], state.segmentBreaks)
                         }
+                          usage={contentAssistantUsage}
                     />
                 )}
 

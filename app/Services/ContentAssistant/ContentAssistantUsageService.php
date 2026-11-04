@@ -23,6 +23,7 @@ class ContentAssistantUsageService
         $workspaceId = $user->current_workspace_id;
 
         return DB::transaction(function () use ($user, $workspaceId, $platform, $brief, $idempotencyKey): ContentAssistantGeneration {
+            $this->releaseExpiredReservations($workspaceId);
             $existing = ContentAssistantGeneration::query()
                 ->where('workspace_id', $workspaceId)
                 ->where('idempotency_key', $idempotencyKey)
@@ -56,6 +57,24 @@ class ContentAssistantUsageService
                 'reserved_at' => CarbonImmutable::now(),
             ]);
         });
+    }
+
+    /** @return array{limit: int, used: int, remaining: int} */
+    public function quota(User $user): array
+    {
+        $this->releaseExpiredReservations($user->current_workspace_id);
+        $limit = (int) config('assistant.monthly_generation_limit');
+        $used = (int) ContentAssistantGeneration::query()
+            ->where('workspace_id', $user->current_workspace_id)
+            ->whereIn('status', ['reserved', 'completed'])
+            ->where('created_at', '>=', CarbonImmutable::now()->startOfMonth())
+            ->sum('quota_weight');
+
+        return [
+            'limit' => $limit,
+            'used' => $used,
+            'remaining' => $limit > 0 ? max(0, $limit - $used) : -1,
+        ];
     }
 
     public function complete(ContentAssistantGeneration $generation, string $suggestion, bool $accepted): ContentAssistantGeneration
@@ -115,5 +134,19 @@ class ContentAssistantUsageService
         });
 
         return $generation->refresh();
+    }
+
+    private function releaseExpiredReservations(string $workspaceId): void
+    {
+        ContentAssistantGeneration::query()
+            ->where('workspace_id', $workspaceId)
+            ->where('status', 'reserved')
+            ->where('reserved_at', '<', CarbonImmutable::now()->subMinutes((int) config('assistant.reservation_ttl_minutes', 30)))
+            ->update([
+                'status' => 'released',
+                'failure_code' => 'reservation_expired',
+                'completed_at' => CarbonImmutable::now(),
+                'updated_at' => CarbonImmutable::now(),
+            ]);
     }
 }
