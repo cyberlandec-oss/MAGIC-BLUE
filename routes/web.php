@@ -6,6 +6,7 @@ use App\Http\Controllers\Gifs\GifBrowserController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicShareController;
 use App\Http\Controllers\WorkspaceMentionController;
+use App\Http\Controllers\ContentAssistantUsageController;
 use App\Http\Middleware\NoIndex;
 use App\Services\Gifs\KlipyClient;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('workspace-mentions', [WorkspaceMentionController::class, 'store'])->name('workspace-mentions.store');
     Route::delete('workspace-mentions/{workspaceMention}', [WorkspaceMentionController::class, 'destroy'])->name('workspace-mentions.destroy');
+    Route::post('content-assistant/generations', [ContentAssistantUsageController::class, 'reserve'])->name('content-assistant.generations.reserve');
+    Route::post('content-assistant/generations/{generation}/complete', [ContentAssistantUsageController::class, 'complete'])->name('content-assistant.generations.complete');
+    Route::post('content-assistant/generations/{generation}/release', [ContentAssistantUsageController::class, 'release'])->name('content-assistant.generations.release');
 
     // Browsing is a proxied third-party read; throttle it like the media routes.
     // whereIn('catalog', ...) below is a route constraint, so Laravel evaluates it during
