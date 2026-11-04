@@ -280,49 +280,112 @@ Verificación aislada de este cambio:
 
 Matriz de estado interno revisada:
 
-| Requisito | Implementación y prueba registrada | Pendiente |
-| --- | --- | --- |
-| Entrega 3: filtros, cobertura, `null`/cero, CSV e impresión | Dashboard y reportes comparten filtros/workspace; Pest `23 tests, 395 assertions` y Vitest `13 tests` aislados | Recorrido visual con series sintéticas y comprobación del navegador |
-| Entrega 4: propuesta, edición, aceptación y conservación del borrador | Adaptador simulado, revisión humana y protección contra sobrescritura; Vitest focalizado `6/6` | Revisión visual aislada y proveedor real, reservada para la fase final |
-| Entrega 5: campañas, UTM, etapas y permisos | Núcleo interno y políticas por workspace; `SalesModuleTest` y prueba de UI registrados en los lotes aislados previos | Revisión visual; no hay atribución, ingresos ni integración CRM externa |
-| Entrega 6: planes publicitarios sin activación | Borradores Meta, presupuesto planeado, estado de revisión y sin ruta de publicación; `AdPlanTest` y prueba de UI registrados previamente | Revisión visual y autorización real del proveedor; no hay gasto ni campañas externas |
+| Requisito | Implementación | Evidencia registrada | Pendiente |
+| --- | --- | --- | --- |
+| Entrega 3: filtros, cobertura, `null`/cero, CSV e impresión | Dashboard y reportes comparten filtros y ámbito de workspace; se conservan cobertura y zona horaria del contrato BI | Pest aislado `23 tests, 395 assertions`; Vitest `13 tests`; validación HTTP/imprimible previa sin métricas sintéticas en la cuenta operativa | Recorrido visual con datos sintéticos, CSV descargado e impresión inspeccionada en navegador |
+| Entrega 4: propuesta, edición, aceptación y conservación del borrador | Adaptador explícitamente simulado, revisión humana, protección de ediciones y restauración confirmada | Vitest focalizado `6/6`; TypeScript, Oxfmt y Oxlint aprobados en el commit anterior | Recorrido visual. Proveedor real, cuotas y persistencia de auditoría siguen en fase final |
+| Entrega 5: campañas, UTM, etapas, permisos y conservación | Núcleo interno por workspace, nombre/email mínimos, UTM declarativas, etapas comerciales, eliminación y resumen sin atribución | `SalesModuleTest` registrado previamente `6 tests, 49 assertions`; tests UI registrados en Vitest; no se atribuyen ingresos ni conversiones | Recorrido visual de creación/edición, UTM, permisos y aislamiento. Integración CRM externa fuera del alcance interno |
+| Entrega 6: planes publicitarios sin activación | Planes Meta en borrador, objetivo, fechas, presupuesto planeado/moneda y revisión; sin ruta ni acción de lanzamiento | `AdPlanTest` y prueba de UI registrados en la suite aislada; no existe gasto ni llamada a proveedor | Recorrido visual de crear/editar/revisar/eliminar. Autorización real de Meta Ads se reserva para la fase final |
 
-La inspección de la instancia visual sigue sin evidencia de navegador. El
-contenedor desechable quedó `healthy` y escucha en `0.0.0.0:8080`; Compose
-declara `127.0.0.1:18081`, pero `docker inspect` muestra `NetworkSettings.Ports`
-vacío y `docker ps` solo anuncia `8080/tcp`. El navegador integrado recibió
-`ERR_CONNECTION_REFUSED` en `http://localhost:18081`. Por tanto, el servidor
-arrancó, pero Docker Desktop no publicó el puerto hacia Windows. Se conserva
-la red `internal` y no se expone el servicio con una red pública para sortearlo.
-Los `tmpfs` de Vite y `set -e` evitan escribir en `node_modules` de solo
-lectura y evitan continuar si falla el build. No se cargaron fixtures ni se
-afectó la aplicación operativa; la revisión visual sigue pendiente.
+31-10-2026 (continuación desde `bff2fbc`): el servicio visual sigue
+respondiendo dentro de la red aislada según la evidencia previa; no se repitió
+el diagnóstico de conectividad. La imagen `mcr.microsoft.com/playwright:v1.55.0-noble`
+no estaba disponible localmente. Su descarga quedó más de 36 minutos en
+`Pulling from playwright`, sin completar ni reportar una causa; se canceló
+únicamente el cliente de descarga. No se obtuvo navegador ni capturas, no se
+cargaron fixtures y no se cambió la red `internal`. Por tanto, no se declara
+completada la revisión visual ni se afirma que no haya defectos.
 
-La suma de los lotes Pest registrados es `1677 Feature + 402 Unit = 2079`, que
-coincide aritméticamente con la ejecución interrumpida de `2051 aprobados + 28
-fallidos`. Los manifiestos de rutas por lote y los omitidos no se conservaron;
-por tanto, no se puede certificar cobertura sin huecos ni doble conteo. La
-ejecución adicional de `SalesModuleTest` (`6 tests, 49 assertions`) se solapa
-con esos lotes y no se suma de nuevo. No se repitió Pest.
+Cobertura Pest: `pest --list-tests --compact` en el entorno de pruebas aislado
+generó un inventario persistente fuera del contenedor: `2.080` casos en `410`
+archivos (`1.678 Feature`, `402 Unit`). Los informes históricos registran
+`1.677 Feature + 402 Unit = 2.079` aprobados por lotes y una ejecución
+interrumpida con `2.051` aprobados y `28` fallidos. Los manifiestos de esos
+lotes y sus omitidos no se conservaron; la ejecución adicional de
+`SalesModuleTest` se solapa y no se suma. Queda un caso Feature del inventario
+actual sin correspondencia demostrable con los resultados históricos; no se
+puede certificar que la cobertura anterior fuera sin huecos o doble conteo.
+No se ejecutó Pest en esta continuación: mientras se intentaba la descarga del
+navegador y el análisis PHPStan, una consulta Docker de solo lectura no
+respondió en más de un minuto. No se reinició Docker/WSL ni se repitió la
+consulta. El recuento de omitidos de los lotes anteriores tampoco quedó
+registrado.
 
-La medición aislada encontró `vendor` de 305 MiB, unos 3.2 MiB en los
-directorios PHP analizados, `/tmp` de 512 MiB vacío al inicio y sin límite de
-memoria en cgroup. No hay evidencia de OOM ni de que el espacio temporal fuera
-el límite. Para evitar lecturas del bind mount Windows, se copió a `/tmp`
-exactamente el alcance de `phpstan.neon` (`app`, `bootstrap/app.php`,
-`config`, `database` y `routes`) y se enlazó el `vendor` de solo lectura.
-PHPStan 2.3.1, nivel 7, analizó los 570 archivos y terminó `[OK] No errors`;
-no se excluyeron rutas ni se cambió la configuración del análisis. La
-ejecución directa usó un límite de memoria de 1 GiB. La ejecución aislada de
-`composer types:check`, con el límite de 512 MiB definido por el script,
-terminó por el `process-timeout` predeterminado de Composer a los 300 s,
-mostrando `0/570` y sin emitir errores PHPStan. No se aumentó ese timeout ni
-se repitió el análisis. Por tanto, el análisis directo completo pasó, pero el
-wrapper exacto sigue inconcluso y no se marca aprobado. El uso lento del bind
-mount Windows es una causa plausible del timeout anterior, no una causa
-demostrada; la copia a `tmpfs` elimina esa ruta de I/O, aunque el wrapper aún
-supera su límite. Entregas 3–6 no se declaran cerradas ni desplegadas
-localmente.
+CI de GitHub Actions para `bff2fbce10b206d714255366269e98ef998b33e7`
+(31-10-2026): linter, job de pruebas (incluido el paso `Tests`) y análisis
+estático terminaron correctamente. La ejecución no publicó artefactos de
+resultados Pest y el log disponible no permitió recuperar un recuento exacto
+de aprobados/omitidos; por ello confirma el éxito del job, pero no cierra la
+reconciliación numérica del inventario de `2.080` casos. La revisión de
+seguridad pasó el escaneo de paquetes maliciosos, pero `composer audit`
+terminó con código `1` por advisories medios para `phpunit/phpunit`
+(`CVE-2026-119193`, versiones afectadas `<13.4.4`) y `symfony/mime`
+(`CVE-2026-45070`, versión 8.1.7 afectada; corregida desde 8.1.10). También
+reportó el paquete abandonado `symplify/rule-doc-generator-contracts`, sin
+reemplazo sugerido. La corrección del lockfile requiere actualizar dependencias
+y repetir controles aislados.
+
+Tras la autorización expresa recibida para actualizar únicamente esas
+dependencias, se intentó `composer update phpunit/phpunit symfony/mime
+--with-all-dependencies --no-scripts --no-interaction`. El proceso no produjo
+salida durante más de diez minutos y se detuvo de forma controlada. Una
+inspección de solo lectura confirma que `composer.lock` conserva PHPUnit
+13.4.3 y Symfony Mime 8.1.7; la corrección no quedó aplicada. No se volvió a
+ejecutar Composer ni pruebas, y el estado de `vendor` tras la interrupción no
+se pudo comprobar. El chequeo local `git status`/`git diff --check` tampoco
+respondió; por ello no se creó commit ni se hizo push de esta actualización
+documental.
+
+PHPStan global nivel 7: se registra como aprobado el análisis directo previo
+de `570/570` archivos con `[OK] No errors`; el `composer types:check` es un
+resultado distinto y sigue inconcluso por el timeout predeterminado de
+Composer a los `300 s` (`0/570`), sin que PHPStan informara errores. No se
+aumentó ese timeout ni se rebajó memoria, reglas o alcance.
+
+La verificación del candidato confirma que no hay cambios tracked en
+`app/`, `bootstrap/`, `config/`, `database/`, `routes/`, `phpstan.neon`,
+`composer.json` ni `composer.lock` respecto de `HEAD`. En un snapshot
+temporal nuevo, una comparación SHA-256 `cmp` pasó para las `570` rutas PHP
+del alcance (`app`, `bootstrap/app.php`, `config`, `database`, `routes`); los
+hashes de `phpstan.neon`, `composer.json` y `composer.lock` también se
+registraron. El autoloader Composer optimizado resuelve clases del proyecto a
+la ruta de montaje `/var/www/html`, no a la copia temporal; el análisis
+exitoso escaneó la copia temporal y esas rutas resueltas corresponden al mismo
+candidato byte por byte. Una comprobación explícita de reflexión resolvió
+`App\Models\User`, `Database\Factories\UserFactory` y
+`Database\Seeders\DatabaseSeeder` a sus archivos de la copia temporal. La
+configuración conserva las cinco rutas y nivel 7.
+
+Comando reproducible para ese análisis directo, dentro del servicio de pruebas
+aislado, tras copiar las cinco rutas de `phpstan.neon` a
+`/tmp/rsmanager-phpstan` y enlazar su `vendor` de solo lectura a
+`/var/www/html/vendor`:
+
+```sh
+cd /tmp/rsmanager-phpstan
+APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=:memory: \
+    php /var/www/html/vendor/bin/phpstan analyse \
+    --configuration=phpstan.neon --no-progress --memory-limit=1G
+```
+
+La ejecución suplementaria con autoload prioritario para la copia verificó
+las rutas por reflexión, pero no produjo un resultado de análisis antes de
+detenerse tras más de 29 minutos; no se interpreta como fallo PHPStan ni se
+suma al análisis aprobado. No se inicia otra ejecución completa en esta ronda.
+
+Preparación de activación local (no ejecutada): el Dockerfile copia el código
+y genera los assets dentro de la imagen; `docker-compose.development.yaml`
+monta solo `storage` y `database/sqlite`. Tras aprobar QA y preservar una copia
+consistente de SQLite, el procedimiento será revisar el estado de migraciones,
+construir únicamente `app`, ejecutar `php artisan migrate --force` con el
+mismo proyecto Compose y volúmenes, y recrear solo `app` con la imagen nueva.
+Las migraciones incrementales de esta entrega son
+`2026_10_30_190000_create_sales_campaigns_and_leads_tables.php` y
+`2026_10_30_190001_create_ad_plans_table.php`. No se ejecutó ninguna
+migración ni build sobre la aplicación operativa. `bff2fbc` está publicado en
+Git; los módulos no están validados visualmente ni desplegados localmente.
+Entregas 3–6 siguen abiertas; las integraciones reales se mantienen para la
+fase final.
 
 30-10-2026: Se corrigió en la interfaz de CRM que miembros sin permiso de
 gestión pudieran editar campañas existentes: los controles de actualización

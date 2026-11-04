@@ -1,0 +1,280 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 7c61c89..2db17f5 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -1,3 +1,12 @@
++# Contexto de REDES SOCIALES MANAGER
++
++Antes de adaptar el producto, leer [PROYECTO.md](PROYECTO.md),
++[AUDITORIA_BASE.md](AUDITORIA_BASE.md) y [PLAN_IMPLEMENTACION.md](PLAN_IMPLEMENTACION.md).
++El stack real es Laravel/Inertia/React. Para métricas y reportes aplicar
++[CONTRATO_BI.md](CONTRATO_BI.md). Las decisiones de adaptación están en
++[ARQUITECTURA_PRODUCTO.md](ARQUITECTURA_PRODUCTO.md).
++Conservar las reglas técnicas de upstream que siguen a continuación.
++
+ <laravel-boost-guidelines>
+ === .ai/tooling rules ===
+ 
+diff --git a/ARQUITECTURA_PRODUCTO.md b/ARQUITECTURA_PRODUCTO.md
+new file mode 100644
+index 0000000..60ba88f
+--- /dev/null
++++ b/ARQUITECTURA_PRODUCTO.md
+@@ -0,0 +1,35 @@
++# Decisiones de arquitectura
++
++## ADR-001 — Ampliar Shoutrrr
++
++Estado: adoptado para esta adaptación. Mantener Laravel/Inertia/React, Bun y Recharts. Las versiones precisas se resuelven desde composer.lock y bun.lock. No añadir FastAPI, otro frontend, otra cola o un segundo sistema de usuarios sin una necesidad demostrada.
++
++## ADR-002 — Cliente y permisos
++
++Estado: propuesta de producto para validar con el primer cliente. Un workspace delimita inicialmente un cliente. Las marcas se pueden representar con las capacidades existentes de cuentas y conjuntos, después de comprobar que cubren permisos y reportes. No crear tablas organization/brand paralelas por anticipado.
++
++Conservar owner/admin/member. Antes de añadir analista o revisor, definir acciones permitidas y pruebas de acceso. Las consultas, exportaciones y tareas asíncronas deben acotar el workspace explícitamente o garantizar su contexto; un identificador recibido del navegador no concede acceso.
++
++## ADR-003 — Publicación e intermediarios
++
++Estado: decisión de proveedor pendiente. Priorizar la validación de los conectores nativos existentes para Facebook, Instagram y LinkedIn. Mantener los contratos y registros de conectores de la base; no acoplar la UI a un SDK externo.
++
++Comparar Upload-Post y Ayrshare con el mismo guion solo cuando exista una brecha concreta: formatos, renovación de credenciales, fiabilidad, cobertura o coste operativo. La evaluación debe confirmar uso SaaS/comercial y reventa/marca blanca cuando corresponda, titularidad y exportación de datos, tarifas vigentes, sobrecostes, límites por perfil, webhooks, retención y salida del proveedor. Registrar fuentes y fecha; no convertir precios históricos en presupuesto.
++
++Prueba: cuenta de prueba autorizada, texto/imagen/vídeo según capacidad, LinkedIn perfil y página por separado, programación y zona horaria, expiración OAuth, límites, timeout tras envío y reconciliación sin duplicados, recuperación de métricas y desconexión. Resultado: matriz con evidencias, costes por escenario y decisión documentada.
++
++## ADR-004 — Inteligencia comercial
++
++Estado: dirección de producto adoptada. Ampliar la analítica nativa con filtros, calidad de datos, reportes y posteriormente CRM. Power BI Embedded no es una dependencia inicial. Recharts ya está instalado; no añadir librerías gráficas sin justificación.
++
++Separar datos orgánicos, gasto publicitario y eventos CRM. No presentar engagement como ventas ni atribución de una red como ingresos confirmados. El contrato está en [CONTRATO_BI.md](CONTRATO_BI.md).
++
++## ADR-005 — Despliegue y datos
++
++Estado: conservar entorno actual en la fase inicial. La configuración de desarrollo soporta SQLite; PostgreSQL y Redis son opciones a evaluar para producción, no una migración autorizada de datos ahora.
++
++No ejecutar migrate:fresh, reset, seeders demo, regeneración de APP_KEY ni eliminación de volúmenes en la instalación del usuario. composer dev incluye migraciones y seeders: inspeccionarlo antes de usarlo. Para pruebas usar una base aislada y comprobar configuración de tests. Nunca versionar .env, tokens, exports con datos personales ni bases reales.
++
++## ADR-006 — Licencia y continuidad
++
++Conservar Apache-2.0 y avisos aplicables de upstream. Separar marca comercial propia de las atribuciones. Revisar licencias de nuevas dependencias y condiciones de APIs al introducirlas. Registrar las adaptaciones y mantener trazabilidad con el upstream; no prometer derechos de terceros basándose solo en la licencia del repositorio.
+diff --git a/AUDITORIA_BASE.md b/AUDITORIA_BASE.md
+new file mode 100644
+index 0000000..0990702
+--- /dev/null
++++ b/AUDITORIA_BASE.md
+@@ -0,0 +1,35 @@
++# Auditoría inicial de Shoutrrr
++
++Inspección estática de `28bbc7f9e1ff225ffda264185e45d756a46b82b4`. No se ejecutó la suite ni se conectaron cuentas externas en esta entrega.
++
++| Área | Evidencia local | Consecuencia para la adaptación |
++| --- | --- | --- |
++| Backend | `composer.json`: PHP ^8.5, Laravel ^13.7, Inertia ^3.0 | Mantener stack y dependencias bloqueadas |
++| Frontend | `package.json`: React 19, TypeScript, Tailwind 4, Recharts; Bun | Ampliar componentes existentes |
++| Clientes/equipos | `app/Models/Workspace.php`, `app/Enums/WorkspaceRole.php` | Reutilizar workspaces y roles owner/admin/member |
++| Aislamiento | `app/Concerns/HasWorkspaceScope.php`, modelos Post y ConnectedAccount | Revisar también jobs, exportaciones y contexto ausente |
++| LinkedIn | `app/Services/Publishing/Connectors/LinkedInConnector.php`, `app/Http/Controllers/ConnectedAccounts/LinkedInPageConnectionController.php` | Ya hay publicación y conexión de páginas; validar con OAuth real |
++| Métricas LinkedIn | `app/Services/Metrics/Connectors/LinkedInMetricsConnector.php` | El conector diferencia páginas y perfiles; marca analítica personal unsupported |
++| Analítica | `app/Http/Controllers/AnalyticsController.php`, `resources/js/pages/analytics/index.tsx` | Ya hay resumen, series y ranking; extender esta pantalla |
++| Histórico | `app/Models/AccountMetric.php`, `app/Models/PostTargetMetric.php` | Revisar granularidad antes de calcular variaciones |
++| Calendario | `resources/js/pages/posts/calendar/index.tsx` | Aprovechar calendario existente |
++| Pruebas | `tests/Feature/Metrics/AnalyticsPageTest.php`, `resources/js/pages/analytics/index.test.ts` | Extender pruebas existentes |
++| Entorno local | `docker-compose.development.yaml` | SQLite y servicios supervisados disponibles; no cambiar persistencia ahora |
++
++## Hallazgos prioritarios de analítica
++
++1. `buildSummary()` convierte seguidores no medidos en cero al sumar. Esto impide distinguir ausencia total de lecturas y un cero observado.
++2. El ranking selecciona publicaciones que tengan al menos un destino con estado `Ok`, pero suma las interacciones de todos sus destinos. Debe definirse qué hacer con destinos fallidos, limitados o no soportados y probar un caso mixto.
++3. El resumen usa publicaciones por su fecha de publicación y sus contadores disponibles. No equivale necesariamente a interacciones ocurridas dentro del periodo. La etiqueta y el reporte deben declarar esa semántica.
++4. La suma de seguidores de cuentas distintas no representa personas únicas. Debe presentarse como suma de seguidores por cuenta.
++5. `HasWorkspaceScope` solo aplica el filtro cuando existe contexto. Esto requiere revisar middleware y jobs antes de afirmar aislamiento completo; por sí solo no prueba una vulnerabilidad explotable.
++
++## Brechas por confirmar
++
++La inspección inicial no acredita un CRM, ventas, constructor de reportes, flujo de aprobaciones editoriales o generación IA completos. No presentarlos como funciones listas. Levantar inventario más profundo antes de añadir módulos duplicados.
++
++Los conectores encontrados no prueban que la aplicación tenga productos OAuth aprobados, permisos vigentes o cobertura real de formatos. Las pruebas de cuentas deben registrar plataforma, tipo de cuenta, scopes, formatos, límites, resultado y fecha.
++
++## Validación realizada en esta entrega
++
++Checkout del SHA indicado; lectura de instrucciones y archivos referenciados; verificación de enlaces locales del paquete y de aplicabilidad del parche. No se ejecutaron pruebas PHP/JS porque los cambios son exclusivamente documentales. No se modificaron datos, variables de entorno ni servicios.
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 7c61c89..2db17f5 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -1,3 +1,12 @@
++# Contexto de REDES SOCIALES MANAGER
++
++Antes de adaptar el producto, leer [PROYECTO.md](PROYECTO.md),
++[AUDITORIA_BASE.md](AUDITORIA_BASE.md) y [PLAN_IMPLEMENTACION.md](PLAN_IMPLEMENTACION.md).
++El stack real es Laravel/Inertia/React. Para métricas y reportes aplicar
++[CONTRATO_BI.md](CONTRATO_BI.md). Las decisiones de adaptación están en
++[ARQUITECTURA_PRODUCTO.md](ARQUITECTURA_PRODUCTO.md).
++Conservar las reglas técnicas de upstream que siguen a continuación.
++
+ <laravel-boost-guidelines>
+ === .ai/tooling rules ===
+ 
+diff --git a/CONTINUAR_VSCODE.md b/CONTINUAR_VSCODE.md
+new file mode 100644
+index 0000000..c2a1a7a
+--- /dev/null
++++ b/CONTINUAR_VSCODE.md
+@@ -0,0 +1,28 @@
++# Continuación desde VS Code
++
++## Aplicar esta entrega
++
++Extraer `inicio-adaptacion.patch` del paquete descargable. Desde la carpeta del repositorio, ejecutar con la ruta real del parche:
++
++```bat
++git status --short
++git apply --check "C:\ruta\inicio-adaptacion.patch"
++git apply "C:\ruta\inicio-adaptacion.patch"
++git diff --stat
++```
++
++El parche se generó sobre `28bbc7f9e1ff225ffda264185e45d756a46b82b4`. Si hay conflictos, revisar los archivos afectados y combinar el contexto, sin forzar ni sobrescribir cambios locales. No aplicar también los archivos de consulta del ZIP: son el mismo contenido.
++
++Tras revisar, versionar únicamente los ocho archivos del parche. La autenticación de Git Credential Manager es local a Windows; no se comparte con otras sesiones.
++
++## Instrucción para el agente local
++
++Lee AGENTS.md, CLAUDE.md y PROYECTO.md. La base es Shoutrrr existente; conserva Laravel/Inertia/React, Bun y las convenciones de tests. Continúa por Entrega 1 de PLAN_IMPLEMENTACION.md, usando CONTRATO_BI.md y los hallazgos de AUDITORIA_BASE.md.
++
++Primero inspecciona AnalyticsController, los tipos y componentes de analytics y las pruebas existentes. Activa las skills técnicas relevantes y consulta la documentación de versión con Laravel Boost si está disponible; si falta, registra la limitación y usa documentación oficial como alternativa.
++
++Implementa la distinción entre sin medición y cero observado, y evita que destinos fallidos/no soportados aporten contadores a agregados presentados como actuales. Incluye cobertura parcial y semántica visible. Actualiza backend, tipos e interfaz de manera compatible y extiende las pruebas focalizadas. Revisa aislamiento entre workspaces en las consultas afectadas.
++
++No reinicies la base, ejecutes seeders demo, cambies APP_KEY, publiques en redes ni añadas dependencias como parte de esta tarea. Usa base de pruebas aislada. No reformules la arquitectura ni añadas el CRM antes de cerrar esta entrega.
++
++Ejecuta Pest para AnalyticsPageTest y pruebas relevantes de workspace; Vitest para analytics; verificaciones de tipos, Pint para PHP modificado y lint/format pertinentes. Si faltan dependencias o herramientas, indica qué no se ejecutó: no declares validación completa. Actualiza PLAN_IMPLEMENTACION con archivos, pruebas, commit y pendientes; presenta un diff pequeño y revisable.
+diff --git a/CONTRATO_BI.md b/CONTRATO_BI.md
+new file mode 100644
+index 0000000..e4d7e33
+--- /dev/null
++++ b/CONTRATO_BI.md
+@@ -0,0 +1,40 @@
++# Contrato de métricas y reportes
++
++Estado: especificación propuesta; no describe una función nueva ya desplegada.
++
++## Datos mínimos
++
++Cada indicador debe informar valor nullable, estado, origen, cuenta/workspace, intervalo o fecha de captura, granularidad y cobertura. Reutilizar `MetricsStatus` (ok, unsupported, rate_limited, failed) en los conectores. La presentación puede añadir sin datos y desactualizado sin modificar por defecto el enum persistido.
++
++- `null`: no existe un valor válido disponible.
++- `0`: existe una medición válida de cero.
++- Parcial: hay mediciones válidas para parte del conjunto; mostrar cobertura y no aparentar un total completo.
++- Desactualizado: conservar la última lectura con fecha y advertencia de frescura definida por cadencia, sin presentarla como actual.
++
++## Indicadores
++
++| Indicador | Regla | Restricción |
++| --- | --- | --- |
++| Publicaciones | Conteo del conjunto publicado en el intervalo | Declarar inclusión de estado partial y evitar duplicar por destino |
++| Seguidores | Última lectura válida por cuenta y suma declarada | No equivale a personas únicas; ausencia total produce null |
++| Crecimiento | Última menos primera lectura comparable por cuenta | Necesita dos lecturas; mostrar cobertura |
++| Interacciones | Likes + comentarios + reposts de destinos válidos | Etiquetar acumulado de publicaciones del periodo si esa es la fuente |
++| Alcance | Métrica según proveedor y granularidad | No sumar para afirmar alcance único entre cuentas o redes |
++| Engagement rate | Interacciones / denominador declarado × 100 | Denominador cero o ausente produce null; no mezclar fórmulas |
++| Leads | Registros deduplicados del CRM o formularios definidos | Distinguir persona, evento y oportunidad |
++| CPL | Gasto / leads atribuibles en alcance comparable | Moneda, periodo y atribución explícitos; sin leads, null |
++| ROAS | Ingresos atribuidos / gasto | Diferenciar atribución de plataforma y ventas CRM; sin gasto, null |
++
++No sumar snapshots acumulativos del mismo post. Para interacciones ocurridas durante un intervalo se requiere una fuente temporal adecuada; la diferencia de snapshots exige controlar falta de cobertura y correcciones del proveedor. No comparar monedas sin conversión explícita y fecha de tasa.
++
++## Dashboard inicial
++
++Filtros por intervalo, red y cuenta dentro del workspace autorizado. Cabecera con zona horaria, fecha de actualización y cobertura. Tarjetas: publicaciones, seguidores e interacciones. Gráficos: evolución de seguidores y publicaciones; tabla de contenido y estado por cuenta. Estados visibles: sin conexión, sin datos, parcial, desactualizado y error recuperable.
++
++## Reportes para clientes
++
++Primera versión propuesta: vista imprimible y CSV de los datos mostrados. No hace falta un constructor libre para esta fase. Incluir cliente, intervalo, filtros, fecha, definiciones, cobertura y fuentes. Revalidar autorización al exportar. Neutralizar fórmulas al exportar texto de usuario a CSV; no incluir credenciales, respuestas API crudas o PII innecesaria. Una URL pública de reporte requiere un diseño de expiración/revocación independiente.
++
++## Criterios de aceptación
++
++Sin métricas válidas se muestra «Sin datos»; una lectura válida cero muestra 0. Un destino fallido no aporta contadores como medición actual. Un conjunto parcial declara su cobertura. Un usuario de otro workspace no puede obtener datos ni exportarlos cambiando IDs. Un reporte reproduce filtros y reglas de la pantalla. Los datos de demostración jamás se presentan como resultados reales.
+diff --git a/PLAN_IMPLEMENTACION.md b/PLAN_IMPLEMENTACION.md
+new file mode 100644
+index 0000000..aa68d9b
+--- /dev/null
++++ b/PLAN_IMPLEMENTACION.md
+@@ -0,0 +1,37 @@
++# Plan de implementación
++
++## Entrega 0 — Contexto técnico (preparada)
++
++Auditoría de código, decisiones, contrato BI y esta secuencia. Preservar AGENTS/CLAUDE originales y añadir enlaces al contexto comercial. Estado: preparada localmente; pendiente aplicar en el Windows del propietario. No es una entrega funcional.
++
++## Entrega 1 — Métricas fiables (siguiente)
++
++Resolver ausencia frente a cero y agregados de destinos mixtos. Trabajar sobre AnalyticsController y los tipos/componentes que consumen summary. Añadir cobertura observable y etiquetas precisas; no alterar datos almacenados ni conectores en esta tarea salvo necesidad probada.
++
++Pruebas: ninguna cuenta; cuenta sin lecturas; lectura válida cero; dos cuentas con cobertura parcial; post con destino ok y destino failed con contadores antiguos; comparación sin baseline; acceso entre dos workspaces. Extender AnalyticsPageTest y analytics/index.test.ts. Resultado exigido: pruebas focalizadas pasando, tipos compatibles y UI que no inventa resultados.
++
++## Entrega 2 — Conexiones reales
++
++Validar Facebook, Instagram y LinkedIn con cuentas de prueba autorizadas. Separar perfil y página LinkedIn y comprobar capacidades del producto OAuth contratado/aprobado. Registrar publicación y lectura de métricas, permisos, errores y renovación. No enviar contenido real de clientes sin autorización editorial. Determinar si se necesita la prueba Upload-Post/Ayrshare descrita en arquitectura.
++
++## Entrega 3 — Dashboard y reportes
++
++Añadir filtros y estados de calidad; reutilizar gráficos existentes. Implementar vista imprimible y CSV autorizado del mismo conjunto de datos. Aceptación: coherencia de filtros/zonas horarias y cobertura, aislamiento, neutralización de fórmulas CSV y pruebas de interfaz. Acordar marca comercial antes de una sustitución global de identidad visual.
++
++## Entrega 4 — Creación asistida y aprobación
++
++Inventariar capacidades actuales antes de añadirlas. Proponer proveedor IA, costes por workspace, almacenamiento de borradores y control de cuotas. Diseñar estados editoriales sin confluir con estados de envío. Aceptación: el modelo no publica directamente; cambios tras aprobación requieren una política explícita; permisos y auditoría por workspace.
++
++## Entrega 5 — Campañas, UTM y CRM
++
++Elegir CRM con el propietario y definir eventos/identidades. Registrar fuente, campaña, leads, oportunidades e ingresos verificables. Ingesta idempotente, deduplicación y minimización de PII. Aceptación: evento repetido no duplica ingresos; no se mezclan monedas; atribución y ventas reales se distinguen.
++
++## Entrega 6 — Anuncios y SaaS productivo
++
++Evaluar Meta Ads inicialmente, permisos, límites de gasto y aprobación humana. LinkedIn Ads/Google Ads son alcance posterior propuesto. Revisar facturación existente, cuotas, backups restaurables, observabilidad y despliegue antes de clientes reales. No activar gasto publicitario como efecto de una prueba técnica.
++
++## Registro de avance
++
++Actualizar aquí fecha, commit, alcance, pruebas ejecutadas y limitaciones por entrega. No marcar completado un conector por existir en código ni un dashboard por tener datos simulados.
++
++26-10-2026: Entrega 0 preparada sobre 28bbc7f; inspección estática y comprobaciones documentales. Entregas 1–6 pendientes.
+diff --git a/PROYECTO.md b/PROYECTO.md
+new file mode 100644
+index 0000000..f46779b
+--- /dev/null
++++ b/PROYECTO.md
+@@ -0,0 +1,35 @@
++# REDES SOCIALES MANAGER
++
++Plataforma comercial de gestión de contenidos, publicación multicanal e inteligencia comercial para clientes. Este archivo es el punto de entrada de la adaptación de Shoutrrr.
++
++## Base y estado
++
++Base inspeccionada: `28bbc7f9e1ff225ffda264185e45d756a46b82b4`, rama `main`, 26 de octubre de 2026. Repositorio: https://github.com/lacibelestudio-sudo/REDES-SOCIALES-MANAGER
++
++Esta entrega establece el contexto técnico y el plan de implementación. No incorpora todavía nuevas pantallas, conectores ni migraciones. El funcionamiento en Windows fue reportado por el propietario; esta revisión es de código y no equivale a una prueba de publicación real.
++
++## Lectura del proyecto
++
++1. [Auditoría de la base](AUDITORIA_BASE.md): funciones encontradas y brechas.
++2. [Decisiones de arquitectura](ARQUITECTURA_PRODUCTO.md): stack, aislamiento e integraciones.
++3. [Contrato del dashboard](CONTRATO_BI.md): significado y calidad de los indicadores.
++4. [Plan de implementación](PLAN_IMPLEMENTACION.md): entregas y pruebas de aceptación.
++5. [Continuación desde VS Code](CONTINUAR_VSCODE.md): siguiente tarea concreta.
++
++Las instrucciones técnicas siguen en [AGENTS.md](AGENTS.md) y [CLAUDE.md](CLAUDE.md). La documentación original permanece en [README.md](README.md). Conservar [LICENSE](LICENSE) y las atribuciones del proyecto base.
++
++## Objetivos
++
++- Crear, revisar, programar y publicar contenido orgánico, priorizando Facebook, Instagram y LinkedIn.
++- Gestionar clientes con aislamiento de datos, miembros y permisos.
++- Entregar gráficos y reportes que conecten resultados de redes con leads, oportunidades y ventas cuando exista información de CRM.
++- Evaluar el uso de Upload-Post o Ayrshare únicamente para brechas demostradas de los conectores actuales.
++- Incorporar generación asistida por IA y revisión humana en una fase explícita.
++
++La gestión de anuncios constituye un módulo separado. No se presupone que una API de publicación permita comprar anuncios ni que elimine los permisos exigidos por cada red.
++
++## Alcance inicial
++
++Primero: calidad de métricas, validación de conexiones reales, dashboard filtrable y reportes por cliente. Después: contenido asistido, aprobación, campañas/UTM y CRM. Power BI Embedded y compra de anuncios quedan como ampliaciones evaluables.
++
++Las propuestas anteriores basadas en FastAPI o siete roles nuevos quedan sustituidas, para implementación, por las decisiones de este paquete. No importar la documentación anterior como si describiera funciones existentes.
