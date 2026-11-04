@@ -247,6 +247,25 @@ sigue pendiente, por lo que la entrega no se declara cerrada.
 
 ## Registro de avance
 
+04-11-2026 — verificación del repositorio MAGIC-BLUE:
+
+- `origin` apunta al repositorio nuevo, la rama activa es `main` y la última
+  corrección local es `845d205`.
+- `inicio-adaptacion.patch` fue revisado: solo contenía documentación y diffs
+  históricos, sin secretos ni datos personales, y duplicaba archivos ya
+  incorporados. Se retiró del seguimiento sin reescribir historial; la copia
+  local se conserva sin seguimiento.
+- El remoto nuevo tiene workflows propios de lint, pruebas, seguridad y
+  release. No se atribuyen resultados CI del repositorio anterior a este remoto.
+- El lockfile aún contiene PHPUnit `13.4.3` y Symfony Mime `v8.1.7`. La
+  actualización aislada sigue pendiente porque este entorno no dispone de
+  PHP/Composer y Docker no tiene acceso al daemon. No se modificó `vendor` ni
+  el entorno operativo.
+- Las entregas 3–6 cuentan con implementación interna y pruebas focalizadas
+  registradas, pero el cierre visual/funcional y la integración real de IA
+  siguen pendientes. OAuth, publicación y gasto publicitario permanecen fuera
+  de esta fase.
+
 Actualizar aquí fecha, commit, alcance, pruebas ejecutadas y limitaciones por entrega. No marcar completado un conector por existir en código ni un dashboard por tener datos simulados.
 
 31-10-2026 (continuación desde `be07563`): se corrigió el flujo de
