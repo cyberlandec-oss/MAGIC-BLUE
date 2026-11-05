@@ -23,7 +23,12 @@ jobs:
           tools: composer:v2
 
       - name: Update security-patched packages
-        run: composer update 'phpunit/phpunit:^13.4.4' 'symfony/mime:^8.1.10' --with-all-dependencies --no-scripts --no-interaction --no-progress --prefer-dist
+        run: |
+          set +e
+          composer update 'phpunit/phpunit:^13.4.4' 'symfony/mime:^8.1.10' --with-all-dependencies --no-scripts --no-interaction --no-progress --prefer-dist 2>&1 | tee /tmp/composer-update.log
+          status=${PIPESTATUS[0]}
+          cat /tmp/composer-update.log >> "$GITHUB_STEP_SUMMARY"
+          exit $status
 
       - name: Commit lockfile when changed
         run: |
