@@ -2,7 +2,11 @@ import { useHttp } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 type Quota = { limit: number; used: number; remaining: number };
-type ReserveResponse = { generation_id: string; provider: string; status: string };
+type ReserveResponse = {
+    generation_id: string;
+    provider: string;
+    status: string;
+};
 
 export function useContentAssistantUsage() {
     const quotaHttp = useHttp<Record<string, never>, Quota>({});
@@ -10,10 +14,10 @@ export function useContentAssistantUsage() {
         { platform: string; brief: string; idempotency_key: string },
         ReserveResponse
     >({ platform: '', brief: '', idempotency_key: '' });
-    const completeHttp = useHttp<{ suggestion: string; accepted: boolean }, { status: string }>({
-        suggestion: '',
-        accepted: false,
-    });
+    const completeHttp = useHttp<
+        { suggestion: string; accepted: boolean },
+        { status: string }
+    >({ suggestion: '', accepted: false });
     const releaseHttp = useHttp<Record<string, never>, { status: string }>({});
     const [quota, setQuota] = useState<Quota | null>(null);
 
@@ -24,10 +28,10 @@ export function useContentAssistantUsage() {
         }
     }
 
+    // The initial quota request must run once for the mounted workspace.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         void refreshQuota();
-        // The initial quota request must run once for the mounted workspace.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     async function reserve(platform: string, brief: string): Promise<ReserveResponse> {

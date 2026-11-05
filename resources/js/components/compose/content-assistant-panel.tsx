@@ -15,7 +15,14 @@ type Props = {
     onApply: (text: string) => void;
     usage?: {
         quota: { limit: number; used: number; remaining: number } | null;
-        reserve: (platform: string, brief: string) => Promise<{ generation_id: string; provider: string; status: string }>;
+        reserve: (
+            platform: string,
+            brief: string,
+        ) => Promise<{
+            generation_id: string;
+            provider: string;
+            status: string;
+        }>;
         complete: (id: string, suggestion: string, accepted: boolean) => Promise<void>;
         release: (id: string) => Promise<void>;
     };
@@ -62,7 +69,9 @@ export function ContentAssistantPanel({
                 reservedId = (await usage.reserve(platform, brief)).generation_id;
                 setGenerationId(reservedId);
             } catch {
-                setNotice('The assistant quota could not be reserved. Your draft was not changed.');
+                setNotice(
+                    'The assistant quota could not be reserved. Your draft was not changed.',
+                );
                 setIsGenerating(false);
                 return;
             }
@@ -152,7 +161,7 @@ export function ContentAssistantPanel({
         }
         setConfirmReplacement(false);
         setNotice(
-            'Applied to the draft editor. Nothing was published; you can restore the previous draft.',
+            'Editorial acceptance recorded and applied to the draft editor. Nothing was published; you can restore the previous draft.',
         );
     }
 
@@ -201,6 +210,14 @@ export function ContentAssistantPanel({
 
             {isOpen && (
                 <div className="mt-3 space-y-3">
+                    {usage?.quota && (
+                        <p className="text-xs text-muted-foreground">
+                            Assistant quota:{' '}
+                            {usage.quota.remaining < 0
+                                ? 'unlimited'
+                                : `${usage.quota.remaining} remaining this month`}
+                        </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                         This local simulation does not call an AI provider.
                         Suggestions stay here until you edit and apply them.
