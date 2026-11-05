@@ -258,4 +258,52 @@ describe('ContentAssistantPanel', () => {
             screen.getByText(/draft changed after generation/i),
         ).toBeInTheDocument();
     });
+
+    it('reserves, completes, and reports editorial acceptance through usage', async () => {
+        const usage = {
+            quota: { limit: 10, used: 0, remaining: 10 },
+            reserve: vi.fn().mockResolvedValue({
+                generation_id: 'generation-1',
+                provider: 'simulated',
+                status: 'reserved',
+            }),
+            complete: vi.fn().mockResolvedValue(undefined),
+            release: vi.fn().mockResolvedValue(undefined),
+        };
+
+        render(
+            <ContentAssistantPanel
+                platform="linkedin"
+                initialBrief="A product update"
+                currentDraft=""
+                disabled={false}
+                onApply={vi.fn()}
+                usage={usage}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole('button', { name: /writing assistant/i }),
+        );
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Generate simulated suggestion',
+            }),
+        );
+        await screen.findByRole('textbox', { name: 'Editable suggestion' });
+        fireEvent.click(screen.getByRole('button', { name: 'Apply to draft' }));
+
+        expect(usage.reserve).toHaveBeenCalledWith(
+            'linkedin',
+            'A product update',
+        );
+        expect(usage.complete).toHaveBeenCalledWith(
+            'generation-1',
+            expect.any(String),
+            true,
+        );
+        expect(
+            await screen.findByText(/Editorial acceptance recorded/i),
+        ).toBeInTheDocument();
+    });
 });

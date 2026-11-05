@@ -23,7 +23,11 @@ type Props = {
             provider: string;
             status: string;
         }>;
-        complete: (id: string, suggestion: string, accepted: boolean) => Promise<void>;
+        complete: (
+            id: string,
+            suggestion: string,
+            accepted: boolean,
+        ) => Promise<void>;
         release: (id: string) => Promise<void>;
     };
     assistant?: ContentAssistantAdapter;

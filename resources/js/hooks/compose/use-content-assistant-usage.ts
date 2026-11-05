@@ -34,21 +34,31 @@ export function useContentAssistantUsage() {
         void refreshQuota();
     }, []);
 
-    async function reserve(platform: string, brief: string): Promise<ReserveResponse> {
-        const response = await reserveHttp.post('/content-assistant/generations', {
+    async function reserve(
+        platform: string,
+        brief: string,
+    ): Promise<ReserveResponse> {
+        reserveHttp.transform(() => ({
             platform,
             brief,
             idempotency_key: crypto.randomUUID(),
-        });
+        }));
+        const response = await reserveHttp.post(
+            '/content-assistant/generations',
+        );
         await refreshQuota();
         return response;
     }
 
-    async function complete(id: string, suggestion: string, accepted: boolean): Promise<void> {
-        await completeHttp.post(`/content-assistant/generations/${id}/complete`, {
-            suggestion,
-            accepted,
-        });
+    async function complete(
+        id: string,
+        suggestion: string,
+        accepted: boolean,
+    ): Promise<void> {
+        completeHttp.transform(() => ({ suggestion, accepted }));
+        await completeHttp.post(
+            `/content-assistant/generations/${id}/complete`,
+        );
         await refreshQuota();
     }
 
