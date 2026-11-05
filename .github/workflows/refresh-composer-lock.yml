@@ -23,7 +23,7 @@ jobs:
           tools: composer:v2
 
       - name: Update security-patched packages
-        run: composer update phpunit/phpunit symfony/mime --with-all-dependencies --no-scripts --no-interaction
+        run: composer update 'phpunit/phpunit:^13.4.4' 'symfony/mime:^8.1.10' --with-all-dependencies --no-scripts --no-interaction --no-progress --prefer-dist
 
       - name: Commit lockfile when changed
         run: |
