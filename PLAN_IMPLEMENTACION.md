@@ -1128,3 +1128,4 @@ abiertas.
   queda cubierto por un archivo vacío de solo lectura. El guard se ejecuta en
   `createApplication()` antes de `setUpTraits()`/`RefreshDatabase`. El modelo
   Compose y los archivos se inspeccionaron sin ejecutar el servicio ni tests.
+Evidencia CI: el SHA 9bcbb48454237e2830815a6a91f859ff05b51239 tiene fallos en tests, linter y composer-audit. Los endpoints de logs respondieron HTTP 403 en esta sesión sin autenticación disponible; no se corrige por intuición y la entrega permanece abierta.
