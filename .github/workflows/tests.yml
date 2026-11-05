@@ -71,12 +71,7 @@ jobs:
         run: bun run build
 
       - name: Tests
-        run: |
-          set +e
-          php artisan test --parallel 2>&1 | tee /tmp/pest.log
-          status=${PIPESTATUS[0]}
-          cat /tmp/pest.log >> "$GITHUB_STEP_SUMMARY"
-          exit $status
+        run: php artisan test --parallel
 
   static-analysis:
     runs-on: ubuntu-latest

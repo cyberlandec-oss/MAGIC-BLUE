@@ -189,10 +189,44 @@ pueden gestionar configuración de IA; miembros conservan permisos actuales de
 edición. La aprobación editorial y el estado de publicación deben permanecer
 separados si se adopta un flujo persistente.
 
-Pendientes para cerrar Entrega 4: proveedor, cuotas/costes por workspace,
-retención/auditoría persistente, política de aprobación final, revisión visual
-aislada e integración real. La generación real queda expresamente pendiente;
-la ausencia de claves no bloquea la simulación ni las pruebas internas.
+La primera parte de estas garantías ya está implementada internamente: las
+reservas y generaciones se persisten por workspace, la cuota se determina en
+servidor, la reserva usa transacción y bloqueo de fila, la idempotencia es
+única por workspace, una reserva liberada no puede completarse, las reservas
+caducadas se liberan al consultar/reservar y la cuota se atribuye al mes de
+creación aunque la finalización ocurra después. La generación completada y la
+aceptación editorial son estados distintos; la auditoría guarda hashes y
+metadatos operativos, no prompts ni secretos. El panel reserva antes de
+generar, completa al aplicar una sugerencia, libera ante error y muestra
+explícitamente que el proveedor sigue simulado. La edición y restauración del
+borrador existente se conservan.
+
+Se añadieron pruebas Pest de idempotencia, aislamiento, liberación,
+finalización única, caducidad y cambio de mes, además de una prueba React del
+flujo reserva--generación simulada--aceptación. La validación local disponible
+confirmó Oxfmt focalizado; PHP/Composer no están disponibles en el host y la
+ejecución aislada se delegó a GitHub Actions. El job aislado de Composer
+actualizó mediante Composer, sin editar manualmente el lockfile, PHPUnit a
+13.4.5, Symfony Mime a 8.1.10 y Pest a 5.3.5 en `b77e418`. El job de seguridad
+del SHA anterior `cff0f40` falló por las versiones antiguas; no se presenta
+como aprobado.
+
+Pendientes para cerrar Entrega 4: completar la ejecución verde de tests/linter
+en el SHA final, revisión visual aislada, una prueba específica de expiración
+por abandono fuera del ciclo de solicitud y la política operativa de
+retención/eliminación. Proveedor, OAuth, conexiones reales, publicación real
+y gasto publicitario permanecen para la fase final.
+
+### Estado de publicación de la Entrega 4
+
+- Implementado: backend de cuota/auditoría y flujo React simulado.
+- Probado: pruebas focalizadas añadidas; Oxfmt local aprobado; CI del SHA
+  `821916d` seguía en ejecución al redactar esta actualización para tests y
+  linter, mientras Composer terminó correctamente.
+- Publicado: `b77e418` en `origin/main`, incluyendo el lockfile generado por
+  CI; el commit de código y workflow anterior es `821916d`.
+- Desplegado: no. No se ejecutaron migraciones ni pruebas sobre la base
+  activa.
 
 ## Entrega 5 — Campañas, UTM y CRM
 
