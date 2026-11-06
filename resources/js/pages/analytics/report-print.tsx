@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 
+import FollowerChart from '@/components/analytics/follower-chart';
 import { index as analyticsRoute } from '@/routes/analytics';
 import type { AnalyticsPageProps } from '@/types/metrics';
 
@@ -159,6 +160,24 @@ export default function AnalyticsPrintReport({
                             {numberFormat.format(summary.posts.value)}
                         </p>
                     </article>
+                </section>
+
+                <section className="space-y-3">
+                    <h2 className="text-lg font-semibold">
+                        Follower history
+                    </h2>
+                    {accounts.some((account) => account.series.length > 1) ? (
+                        <FollowerChart
+                            accounts={accounts}
+                            posts={posts}
+                            timezone={filters.timezone}
+                        />
+                    ) : (
+                        <p className="text-sm text-muted-foreground">
+                            Not enough history is available to draw a follower
+                            series for this filtered set.
+                        </p>
+                    )}
                 </section>
 
                 <section className="space-y-2">

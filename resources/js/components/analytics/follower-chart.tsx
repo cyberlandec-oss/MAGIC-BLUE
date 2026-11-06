@@ -40,7 +40,7 @@ type FollowerChartProps = {
     posts: AnalyticsPageProps['posts'];
     timezone: string;
     /** Per-platform account-metric polling switches. */
-    accountMetricsEnabled: Record<string, boolean>;
+    accountMetricsEnabled?: Record<string, boolean>;
 };
 
 type TrendPoint = { date: number; value: number };
@@ -65,7 +65,7 @@ export default function FollowerChart({
     accounts,
     posts,
     timezone,
-    accountMetricsEnabled,
+    accountMetricsEnabled = {},
 }: FollowerChartProps) {
     // A shared time window across every panel keeps them comparable left-to-right.
     const allDates = accounts.flatMap((account) =>

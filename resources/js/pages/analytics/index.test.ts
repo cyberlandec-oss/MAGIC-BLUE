@@ -9,6 +9,10 @@ import { StatTile } from '@/components/analytics/stat-tile';
 import { disabledPlatformLabels } from '@/lib/platforms';
 
 const source = readFileSync(resolve(import.meta.dirname, 'index.tsx'), 'utf8');
+const printSource = readFileSync(
+    resolve(import.meta.dirname, 'report-print.tsx'),
+    'utf8',
+);
 
 function renderStatTile(value: number | null, caption: string): string {
     return renderToStaticMarkup(
@@ -115,6 +119,16 @@ describe('analytics range switching', () => {
         expect(source).toContain('preserveScroll');
         expect(source).toContain('preserveState');
         expect(source).toContain('only={RANGE_RELOAD_PROPS}');
+    });
+});
+
+describe('printable analytics report', () => {
+    it('reuses the follower chart and preserves the filtered report context', () => {
+        expect(printSource).toContain(
+            "import FollowerChart from '@/components/analytics/follower-chart';",
+        );
+        expect(printSource).toContain('<FollowerChart');
+        expect(printSource).toContain('timezone={filters.timezone}');
     });
 });
 

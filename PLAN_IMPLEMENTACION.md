@@ -1128,4 +1128,19 @@ abiertas.
   queda cubierto por un archivo vacío de solo lectura. El guard se ejecuta en
   `createApplication()` antes de `setUpTraits()`/`RefreshDatabase`. El modelo
   Compose y los archivos se inspeccionaron sin ejecutar el servicio ni tests.
+
+## Matriz de conciliación — revisión interna desde `e337e72`
+
+Esta matriz complementa las entradas históricas anteriores. Las referencias a
+validaciones visuales solo se consideran cerradas cuando existe evidencia de
+navegador o captura reproducible; los checks de CI por sí solos no equivalen a
+despliegue ni validación visual.
+
+| Requisito | Implementación y archivos | Pruebas disponibles | Validación visual | Pendiente concreto | Criterio de cierre |
+| --- | --- | --- | --- | --- | --- |
+| Dashboard filtrable | `app/Http/Controllers/AnalyticsController.php`, `resources/js/pages/analytics/index.tsx` y componentes `resources/js/components/analytics/` | `tests/Feature/Metrics/AnalyticsPageTest.php`, `resources/js/pages/analytics/index.test.ts` | Histórica; no se aporta en este commit una nueva sesión con dos workspaces sintéticos | Ejecutar recorrido aislado con periodo, plataforma y cuenta | Filtros, tarjetas, series y ranking coinciden con la misma carga filtrada |
+| Reporte imprimible con gráficos | `resources/js/pages/analytics/report-print.tsx` reutiliza `FollowerChart` | Prueba Vitest de cableado del gráfico y pruebas existentes de analytics | Pendiente de navegador aislado con datos sintéticos | Comprobar impresión, legibilidad móvil/escritorio y paridad con dashboard | Captura y exportación reproducibles muestran las mismas series y filtros |
+| CSV seguro y coherente | `AnalyticsController::exportCsv()` y contrato BI | Pruebas de analytics/CSV existentes | Pendiente de descarga visual y comparación con la vista | Verificar caracteres especiales, cobertura y filtros en dos workspaces | CSV descargado coincide con el conjunto visible y no expone otro workspace |
+| Calidad y aislamiento BI | `CONTRATO_BI.md`, scopes de workspace, `AnalyticsFilterRequest` | Tests de métricas y aislamiento existentes | Pendiente de recorrido con permisos y cliente secundario | Ejecutar entorno desechable sin base operativa | Sin acceso cruzado; null, cero y cobertura parcial se distinguen |
+| Integraciones externas | Conectores existentes, sin activación en esta fase | Checks históricos de seguridad y tests con fakes | No aplica todavía | Proveedores reales, publicidad y publicación permanecen para la última fase | Solo se habilitan tras autorización y credenciales externas documentadas |
 Evidencia CI: el SHA 9bcbb48454237e2830815a6a91f859ff05b51239 tiene fallos en tests, linter y composer-audit. Los endpoints de logs respondieron HTTP 403 en esta sesión sin autenticación disponible; no se corrige por intuición y la entrega permanece abierta.
