@@ -26,8 +26,8 @@ type Props = {
         complete: (
             id: string,
             suggestion: string,
-            accepted: boolean,
         ) => Promise<void>;
+        accept: (id: string) => Promise<void>;
         release: (id: string) => Promise<void>;
     };
     assistant?: ContentAssistantAdapter;
@@ -56,6 +56,20 @@ export function ContentAssistantPanel({
     const [generationId, setGenerationId] = useState<string | null>(null);
     const [generatedBrief, setGeneratedBrief] = useState<string | null>(null);
     const [generatedDraft, setGeneratedDraft] = useState<string | null>(null);
+
+    async function releaseReservation(id: string): Promise<void> {
+        if (!usage) {
+            return;
+        }
+
+        try {
+            await usage.release(id);
+        } catch {
+            // The suggestion and draft remain untouched so the user can retry.
+        } finally {
+            setGenerationId(null);
+        }
+    }
 
     async function generateSuggestion() {
         setIsGenerating(true);
@@ -87,8 +101,7 @@ export function ContentAssistantPanel({
             response = await assistant.generate(brief, platform);
         } catch {
             if (reservedId && usage) {
-                await usage.release(reservedId);
-                setGenerationId(null);
+                await releaseReservation(reservedId);
             }
             setSuggestion('');
             setNotice(
@@ -103,8 +116,7 @@ export function ContentAssistantPanel({
 
         if (response.status === 'empty_brief') {
             if (reservedId && usage) {
-                await usage.release(reservedId);
-                setGenerationId(null);
+                await releaseReservation(reservedId);
             }
             setSuggestion('');
             setNotice('Enter a brief before generating a suggestion.');
@@ -114,8 +126,7 @@ export function ContentAssistantPanel({
 
         if (response.status === 'unavailable') {
             if (reservedId && usage) {
-                await usage.release(reservedId);
-                setGenerationId(null);
+                await releaseReservation(reservedId);
             }
             setSuggestion('');
             setNotice(
@@ -123,6 +134,26 @@ export function ContentAssistantPanel({
             );
 
             return;
+        }
+
+        if (reservedId && usage) {
+            try {
+                await usage.complete(reservedId, response.text);
+            } catch {
+                try {
+                    await usage.release(reservedId);
+                } catch {
+                    // Keep the draft untouched even when recovery also fails.
+                }
+                setGenerationId(null);
+                setSuggestion('');
+                setNotice(
+                    'The suggestion could not be finalized. Your draft was not changed; try again.',
+                );
+                setIsGenerating(false);
+
+                return;
+            }
         }
 
         setSuggestion(response.text);
@@ -156,14 +187,21 @@ export function ContentAssistantPanel({
             return;
         }
 
+        if (generationId && usage) {
+            try {
+                await usage.accept(generationId);
+            } catch {
+                setNotice(
+                    'The suggestion was generated, but acceptance was not confirmed. Your draft was not changed; try again.',
+                );
+                return;
+            }
+        }
         setPreviousDraft(currentDraft);
         setAppliedDraft(suggestion);
         setConfirmRestore(false);
         onApply(suggestion);
-        if (generationId && usage) {
-            await usage.complete(generationId, suggestion, true);
-            setGenerationId(null);
-        }
+        setGenerationId(null);
         setConfirmReplacement(false);
         setNotice(
             'Editorial acceptance recorded and applied to the draft editor. Nothing was published; you can restore the previous draft.',

@@ -268,6 +268,7 @@ describe('ContentAssistantPanel', () => {
                 status: 'reserved',
             }),
             complete: vi.fn().mockResolvedValue(undefined),
+            accept: vi.fn().mockResolvedValue(undefined),
             release: vi.fn().mockResolvedValue(undefined),
         };
 
@@ -300,8 +301,8 @@ describe('ContentAssistantPanel', () => {
         expect(usage.complete).toHaveBeenCalledWith(
             'generation-1',
             expect.any(String),
-            true,
         );
+        expect(usage.accept).toHaveBeenCalledWith('generation-1');
         expect(
             await screen.findByText(/Editorial acceptance recorded/i),
         ).toBeInTheDocument();

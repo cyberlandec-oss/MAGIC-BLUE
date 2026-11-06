@@ -188,10 +188,12 @@ export default function Composer({
     initialSavedMentions = EMPTY_SAVED_MENTIONS,
     onSaved,
 }: ComposerProps) {
-    const contentAssistantUsage = useContentAssistantUsage();
+    const { shell, workspaces } = usePage().props;
+    const contentAssistantUsage = useContentAssistantUsage(
+        workspaces?.current?.id,
+    );
     const schedulingTz = useSchedulingTimezone();
     const confirm = useConfirm();
-    const { shell } = usePage().props;
     const saveMentionHttp = useHttp<
         Record<string, never>,
         { mention: WorkspaceMention }

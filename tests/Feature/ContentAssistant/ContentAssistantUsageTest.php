@@ -7,6 +7,7 @@ use App\Models\UsageEvent;
 use App\Models\User;
 use App\Services\ContentAssistant\ContentAssistantUsageService;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Date;
 
 beforeEach(function (): void {
     config()->set('instance.defaults.usage_tracking_enabled', true);
@@ -39,8 +40,8 @@ it('consumes usage once when a generation completes and records only hashes', fu
     $service = app(ContentAssistantUsageService::class);
     $generation = $service->reserve($user, Platform::LinkedIn, 'private brief', 'complete-request');
 
-    $service->complete($generation, 'private suggestion', true);
-    $service->complete($generation, 'changed suggestion', false);
+    $service->complete($generation, 'private suggestion');
+    $service->complete($generation, 'changed suggestion');
 
     expect($generation->refresh()->status)->toBe('completed')
         ->and(UsageEvent::count())->toBe(1)
@@ -66,26 +67,46 @@ it('expires abandoned reservations and prevents completing a released reservatio
     $user = User::factory()->withWorkspace()->create();
     $service = app(ContentAssistantUsageService::class);
     $generation = $service->reserve($user, Platform::Facebook, 'brief', 'abandoned-request');
-    $generation->update(['reserved_at' => CarbonImmutable::now()->subMinutes(31)]);
+    $generation->forceFill(['reserved_at' => CarbonImmutable::now()->subMinutes(31)])->save();
+    $eventCount = UsageEvent::count();
 
-    expect($service->quota($user)['used'])->toBe(0);
-    expect($generation->refresh()->status)->toBe('released');
-
-    $service->complete($generation, 'suggestion', true);
+    $service->complete($generation, 'suggestion');
 
     expect($generation->refresh()->status)->toBe('released')
-        ->and(UsageEvent::count())->toBe(0);
+        ->and(UsageEvent::count())->toBe($eventCount);
 });
 
 it('charges a reservation to the month in which it was created', function () {
+    Date::setTestNow('2026-06-30 23:59:00');
+    try {
+        $user = User::factory()->withWorkspace()->create();
+        $service = app(ContentAssistantUsageService::class);
+        $generation = $service->reserve($user, Platform::LinkedIn, 'brief', 'cross-month-request');
+
+        expect($generation->created_at->toDateTimeString())->toBe('2026-06-30 23:59:00');
+
+        Date::setTestNow('2026-07-01 00:01:00');
+
+        $service->complete($generation, 'suggestion');
+
+        expect($generation->refresh()->status)->toBe('completed')
+            ->and($service->quota($user)['used'])->toBe(0)
+            ->and(UsageEvent::count())->toBe(1);
+    } finally {
+        Date::setTestNow();
+    }
+});
+
+it('records editorial acceptance idempotently without consuming another unit', function () {
     $user = User::factory()->withWorkspace()->create();
     $service = app(ContentAssistantUsageService::class);
-    $generation = $service->reserve($user, Platform::LinkedIn, 'brief', 'cross-month-request');
-    $generation->update(['created_at' => CarbonImmutable::now()->subMonth()]);
+    $generation = $service->reserve($user, Platform::LinkedIn, 'brief', 'accept-request');
 
-    $service->complete($generation, 'suggestion', false);
+    $service->complete($generation, 'suggestion');
+    $service->accept($generation);
+    $service->accept($generation);
 
-    expect($generation->refresh()->status)->toBe('completed')
-        ->and($service->quota($user)['used'])->toBe(0)
-        ->and(UsageEvent::count())->toBe(1);
+    expect($generation->refresh()->accepted)->toBeTrue()
+        ->and(UsageEvent::count())->toBe(1)
+        ->and($service->quota($user)['used'])->toBe(1);
 });

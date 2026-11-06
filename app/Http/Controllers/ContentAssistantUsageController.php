@@ -6,13 +6,14 @@ namespace App\Http\Controllers;
 
 use App\Enums\Platform;
 use App\Exceptions\AssistantQuotaExceeded;
+use App\Http\Requests\ContentAssistantAcceptRequest;
 use App\Http\Requests\ContentAssistantCompleteRequest;
 use App\Http\Requests\ContentAssistantReserveRequest;
 use App\Models\ContentAssistantGeneration;
 use App\Services\ContentAssistant\ContentAssistantUsageService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class ContentAssistantUsageController extends Controller
 {
@@ -51,9 +52,28 @@ class ContentAssistantUsageController extends Controller
             ->where('workspace_id', $request->user()->current_workspace_id)
             ->findOrFail($generation);
 
-        $completed = $service->complete($model, (string) $data['suggestion'], (bool) $data['accepted']);
+        $completed = $service->complete($model, (string) $data['suggestion']);
+
+        if ($completed->status !== 'completed') {
+            return response()->json(['message' => 'The assistant reservation has expired.'], Response::HTTP_GONE);
+        }
 
         return response()->json(['generation_id' => $completed->id, 'status' => $completed->status]);
+    }
+
+    public function accept(ContentAssistantAcceptRequest $request, string $generation, ContentAssistantUsageService $service): JsonResponse
+    {
+        $model = ContentAssistantGeneration::query()
+            ->where('workspace_id', $request->user()->current_workspace_id)
+            ->findOrFail($generation);
+
+        $accepted = $service->accept($model);
+
+        if ($accepted->status !== 'completed') {
+            return response()->json(['message' => 'The assistant generation is not complete.'], Response::HTTP_CONFLICT);
+        }
+
+        return response()->json(['generation_id' => $accepted->id, 'status' => $accepted->status, 'accepted' => $accepted->accepted]);
     }
 
     public function release(Request $request, string $generation, ContentAssistantUsageService $service): JsonResponse

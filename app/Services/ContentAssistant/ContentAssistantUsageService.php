@@ -77,9 +77,9 @@ class ContentAssistantUsageService
         ];
     }
 
-    public function complete(ContentAssistantGeneration $generation, string $suggestion, bool $accepted): ContentAssistantGeneration
+    public function complete(ContentAssistantGeneration $generation, string $suggestion): ContentAssistantGeneration
     {
-        $completed = DB::transaction(function () use ($generation, $suggestion, $accepted): ?ContentAssistantGeneration {
+        $completed = DB::transaction(function () use ($generation, $suggestion): ?ContentAssistantGeneration {
             $locked = ContentAssistantGeneration::query()
                 ->whereKey($generation->id)
                 ->lockForUpdate()
@@ -89,10 +89,20 @@ class ContentAssistantUsageService
                 return null;
             }
 
+            if ($locked->reserved_at->lt(CarbonImmutable::now()->subMinutes((int) config('assistant.reservation_ttl_minutes', 30)))) {
+                $locked->update([
+                    'status' => 'released',
+                    'failure_code' => 'reservation_expired',
+                    'completed_at' => CarbonImmutable::now(),
+                ]);
+
+                return $locked;
+            }
+
             $locked->update([
                 'status' => 'completed',
                 'suggestion_hash' => hash('sha256', $suggestion),
-                'accepted' => $accepted,
+                'accepted' => false,
                 'completed_at' => CarbonImmutable::now(),
             ]);
 
@@ -103,17 +113,35 @@ class ContentAssistantUsageService
             return $generation->refresh();
         }
 
-        $this->usageRecorder->record(
-            UsageCategory::Ai,
-            'content_assistant_generation',
-            $completed->workspace_id,
-            Platform::tryFrom($completed->platform),
-            $completed->quota_weight,
-            true,
-            ['provider' => $completed->provider, 'accepted' => $accepted],
-        );
+        if ($completed->status === 'completed') {
+            $this->usageRecorder->record(
+                UsageCategory::Ai,
+                'content_assistant_generation',
+                $completed->workspace_id,
+                Platform::tryFrom($completed->platform),
+                $completed->quota_weight,
+                true,
+                ['provider' => $completed->provider],
+            );
+        }
 
         return $completed->refresh();
+    }
+
+    public function accept(ContentAssistantGeneration $generation): ContentAssistantGeneration
+    {
+        return DB::transaction(function () use ($generation): ContentAssistantGeneration {
+            $locked = ContentAssistantGeneration::query()
+                ->whereKey($generation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->status === 'completed' && ! $locked->accepted) {
+                $locked->update(['accepted' => true]);
+            }
+
+            return $locked->refresh();
+        });
     }
 
     public function release(ContentAssistantGeneration $generation, string $failureCode): ContentAssistantGeneration

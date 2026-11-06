@@ -6,6 +6,4 @@ namespace App\Exceptions;
 
 use RuntimeException;
 
-class AssistantQuotaExceeded extends RuntimeException
-{
-}
+class AssistantQuotaExceeded extends RuntimeException {}
