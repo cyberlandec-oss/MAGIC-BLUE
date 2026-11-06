@@ -23,10 +23,7 @@ type Props = {
             provider: string;
             status: string;
         }>;
-        complete: (
-            id: string,
-            suggestion: string,
-        ) => Promise<void>;
+        complete: (id: string, suggestion: string) => Promise<void>;
         accept: (id: string) => Promise<void>;
         release: (id: string) => Promise<void>;
     };

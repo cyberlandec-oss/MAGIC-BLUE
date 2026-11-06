@@ -14,10 +14,9 @@ export function useContentAssistantUsage(workspaceId?: string) {
         { platform: string; brief: string; idempotency_key: string },
         ReserveResponse
     >({ platform: '', brief: '', idempotency_key: '' });
-    const completeHttp = useHttp<
-        { suggestion: string },
-        { status: string }
-    >({ suggestion: '' });
+    const completeHttp = useHttp<{ suggestion: string }, { status: string }>({
+        suggestion: '',
+    });
     const releaseHttp = useHttp<Record<string, never>, { status: string }>({});
     const [quota, setQuota] = useState<Quota | null>(null);
 
@@ -26,11 +25,13 @@ export function useContentAssistantUsage(workspaceId?: string) {
         if (response) {
             setQuota(response);
         }
-    }, [getQuota, workspaceId]);
+    }, [getQuota]);
 
     useEffect(() => {
-        void refreshQuota();
-    }, [refreshQuota]);
+        if (workspaceId) {
+            void refreshQuota();
+        }
+    }, [refreshQuota, workspaceId]);
 
     async function reserve(
         platform: string,
@@ -48,10 +49,7 @@ export function useContentAssistantUsage(workspaceId?: string) {
         return response;
     }
 
-    async function complete(
-        id: string,
-        suggestion: string,
-    ): Promise<void> {
+    async function complete(id: string, suggestion: string): Promise<void> {
         completeHttp.transform(() => ({ suggestion }));
         await completeHttp.post(
             `/content-assistant/generations/${id}/complete`,

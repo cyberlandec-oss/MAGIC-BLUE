@@ -54,4 +54,4 @@ jobs:
       # Scans every package against Socket via the native Bun security-provider
       # API configured in bunfig.toml; a flagged package fails the install.
       - name: Install + scan dependencies
-        run: bun install
+        run: bun install --frozen-lockfile

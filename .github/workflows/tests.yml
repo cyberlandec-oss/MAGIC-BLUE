@@ -56,7 +56,7 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Install Node Dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Copy Environment File
         run: cp .env.example .env
@@ -68,10 +68,30 @@ jobs:
         run: php artisan passport:keys --no-interaction
 
       - name: Build Assets
+        id: build
         run: bun run build
 
+      - name: Check TypeScript
+        run: bun run types:check
+
+      - name: React tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bun run test --reporter=default --reporter=junit --outputFile=reports/vitest.xml
+
       - name: Tests
-        run: php artisan test --parallel
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          mkdir -p reports
+          php artisan test --parallel --log-junit reports/pest.xml
+
+      - name: Upload test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-${{ matrix.php-version }}
+          path: reports/*.xml
+          retention-days: 14
+          if-no-files-found: warn
 
   static-analysis:
     runs-on: ubuntu-latest
