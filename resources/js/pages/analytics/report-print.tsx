@@ -163,9 +163,7 @@ export default function AnalyticsPrintReport({
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-lg font-semibold">
-                        Follower history
-                    </h2>
+                    <h2 className="text-lg font-semibold">Follower history</h2>
                     {accounts.some((account) => account.series.length > 1) ? (
                         <FollowerChart
                             accounts={accounts}
