@@ -70,7 +70,8 @@ export function ContentAssistantPanel({
             }
 
             try {
-                reservedId = (await usage.reserve(platform, brief)).generation_id;
+                reservedId = (await usage.reserve(platform, brief))
+                    .generation_id;
                 setGenerationId(reservedId);
             } catch {
                 setNotice(

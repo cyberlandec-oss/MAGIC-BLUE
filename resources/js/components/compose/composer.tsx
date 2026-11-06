@@ -1273,7 +1273,7 @@ export default function Composer({
                         onApply={(text) =>
                             handleSegments([text], state.segmentBreaks)
                         }
-                          usage={contentAssistantUsage}
+                        usage={contentAssistantUsage}
                     />
                 )}
 
