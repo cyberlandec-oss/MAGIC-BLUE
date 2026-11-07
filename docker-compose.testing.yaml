@@ -60,7 +60,7 @@ services:
             - /var/www/html/public/emoji:rw,noexec,nosuid,size=64m,mode=1777
     visual:
         profiles: ["visual"]
-        image: magic-blue:448831a
+        image: magic-blue:6caa9f4-report-landmark
         pull_policy: never
         entrypoint: []
         working_dir: /var/www/html

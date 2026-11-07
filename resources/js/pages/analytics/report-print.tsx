@@ -54,7 +54,10 @@ export default function AnalyticsPrintReport({
     return (
         <>
             <Head title="Analytics report" />
-            <main className="mx-auto w-full max-w-5xl space-y-8 px-6 py-8 text-foreground print:max-w-none print:space-y-5 print:px-0 print:py-0">
+            <section
+                aria-labelledby="analytics-report-title"
+                className="mx-auto w-full max-w-5xl space-y-8 px-6 py-8 text-foreground print:max-w-none print:space-y-5 print:px-0 print:py-0"
+            >
                 <header className="flex flex-wrap items-start justify-between gap-4 print:hidden">
                     <div>
                         <p className="text-sm text-muted-foreground">
@@ -85,7 +88,10 @@ export default function AnalyticsPrintReport({
                     <p className="text-sm font-medium text-muted-foreground">
                         {workspace.name}
                     </p>
-                    <h1 className="font-heading text-2xl font-semibold">
+                    <h1
+                        id="analytics-report-title"
+                        className="font-heading text-2xl font-semibold"
+                    >
                         Analytics report
                     </h1>
                     <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
@@ -311,7 +317,7 @@ export default function AnalyticsPrintReport({
                         </ol>
                     </section>
                 )}
-            </main>
+            </section>
         </>
     );
 }
