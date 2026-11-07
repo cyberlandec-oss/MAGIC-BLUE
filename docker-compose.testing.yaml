@@ -72,6 +72,7 @@ services:
                 mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/app/private
                 touch /tmp/rsmanager-visual.sqlite
                 php artisan migrate --force
+                VISUAL_TESTING_AUTHORIZED=1 sh /usr/local/bin/seed-visual-testing.sh
                 exec php artisan serve --host=0.0.0.0 --port=8080
         environment:
             APP_ENV: testing
@@ -90,20 +91,24 @@ services:
             SCHEDULER_ENABLED: "false"
             INERTIA_SSR_ENABLED: "false"
             SKIP_WAYFINDER_GENERATE: "true"
+            SOCIALITE_ENABLED: "false"
+            VISUAL_TESTING_AUTHORIZED: "1"
         env_file:
             - path: ./tests/Fixtures/empty-testing.env
               required: true
         ports:
-            - "18081:8080"
+            - "127.0.0.1:18081:8080"
         networks:
             - visual-isolated
-        volumes: []
+        volumes:
+            - type: bind
+              source: ./scripts/seed-visual-testing.sh
+              target: /usr/local/bin/seed-visual-testing.sh
+              read_only: true
         tmpfs:
             - /tmp:rw,noexec,nosuid,size=512m
             - /var/www/html/bootstrap/cache:rw,noexec,nosuid,size=16m,mode=1777
             - /var/www/html/storage:rw,noexec,nosuid,size=64m,mode=1777
-            - /var/www/html/public/build:rw,noexec,nosuid,size=512m,mode=1777
-            - /var/www/html/public/emoji:rw,noexec,nosuid,size=64m,mode=1777
 
 volumes:
     dev-vendor:
@@ -115,4 +120,6 @@ volumes:
 
 networks:
     visual-isolated:
-        internal: true
+        # Docker Desktop does not publish ports from internal networks. The
+        # visual service has no provider credentials and Socialite is disabled.
+        internal: false
