@@ -60,7 +60,7 @@ services:
             - /var/www/html/public/emoji:rw,noexec,nosuid,size=64m,mode=1777
     visual:
         profiles: ["visual"]
-        image: shoutrrr:dev
+        image: magic-blue:448831a
         pull_policy: never
         entrypoint: []
         working_dir: /var/www/html
@@ -70,7 +70,6 @@ services:
             - |
                 set -e
                 mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/app/private
-                bun run build
                 touch /tmp/rsmanager-visual.sqlite
                 php artisan migrate --force
                 exec php artisan serve --host=0.0.0.0 --port=8080
@@ -95,32 +94,14 @@ services:
             - path: ./tests/Fixtures/empty-testing.env
               required: true
         ports:
-            - "127.0.0.1:18081:8080"
+            - "18081:8080"
         networks:
             - visual-isolated
-        volumes:
-            - type: bind
-              source: .
-              target: /var/www/html
-              read_only: true
-            - type: bind
-              source: ./tests/Fixtures/empty-testing.env
-              target: /var/www/html/.env
-              read_only: true
-            - type: volume
-              source: dev-vendor
-              target: /var/www/html/vendor
-              read_only: true
-            - type: volume
-              source: dev-node-modules
-              target: /var/www/html/node_modules
-              read_only: true
+        volumes: []
         tmpfs:
             - /tmp:rw,noexec,nosuid,size=512m
-            - /var/www/html/node_modules/.vite-temp:rw,noexec,nosuid,size=16m,mode=1777
-            - /var/www/html/node_modules/.vite:rw,noexec,nosuid,size=32m,mode=1777
-            - /var/www/html/bootstrap/cache:rw,noexec,nosuid,size=16m
-            - /var/www/html/storage:rw,noexec,nosuid,size=64m
+            - /var/www/html/bootstrap/cache:rw,noexec,nosuid,size=16m,mode=1777
+            - /var/www/html/storage:rw,noexec,nosuid,size=64m,mode=1777
             - /var/www/html/public/build:rw,noexec,nosuid,size=512m,mode=1777
             - /var/www/html/public/emoji:rw,noexec,nosuid,size=64m,mode=1777
 
