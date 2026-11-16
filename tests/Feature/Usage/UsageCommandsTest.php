@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\ContentAssistantGeneration;
 use App\Models\UsageEvent;
 use App\Models\UsagePeriodCounter;
+use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\Date;
 
@@ -64,4 +66,37 @@ it('prune keeps open-period events even under a short retention window', functio
 
     expect(UsageEvent::count())->toBe(1)
         ->and(UsageEvent::firstOrFail()->is($current))->toBeTrue();
+});
+
+it('prune cleans usage events across workspaces without deleting assistant history', function () {
+    config()->set('usage.retention_days', 30);
+    $firstUser = User::factory()->withWorkspace()->create();
+    $secondUser = User::factory()->withWorkspace()->create();
+    $oldOccurredAt = Date::now()->subDays(60);
+
+    foreach ([$firstUser, $secondUser] as $user) {
+        UsageEvent::factory()->create([
+            'workspace_id' => $user->current_workspace_id,
+            'occurred_at' => $oldOccurredAt,
+        ]);
+        UsageEvent::factory()->create([
+            'workspace_id' => $user->current_workspace_id,
+            'occurred_at' => Date::now()->subDays(5),
+        ]);
+    }
+
+    $generation = ContentAssistantGeneration::factory()->create([
+        'workspace_id' => $firstUser->current_workspace_id,
+        'user_id' => $firstUser->id,
+        'idempotency_key' => 'retention-generation-key',
+        'status' => 'completed',
+        'completed_at' => $oldOccurredAt,
+    ]);
+
+    $this->artisan('usage:prune')->assertSuccessful();
+
+    expect(UsageEvent::where('occurred_at', $oldOccurredAt)->count())->toBe(0)
+        ->and(UsageEvent::count())->toBe(2)
+        ->and(ContentAssistantGeneration::whereKey($generation->id)->value('idempotency_key'))
+        ->toBe('retention-generation-key');
 });
