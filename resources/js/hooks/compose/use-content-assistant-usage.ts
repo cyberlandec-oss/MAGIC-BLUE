@@ -36,16 +36,21 @@ export function useContentAssistantUsage(workspaceId?: string) {
     async function reserve(
         platform: string,
         brief: string,
+        idempotencyKey?: string,
     ): Promise<ReserveResponse> {
         reserveHttp.transform(() => ({
             platform,
             brief,
-            idempotency_key: crypto.randomUUID(),
+            idempotency_key: idempotencyKey ?? crypto.randomUUID(),
         }));
         const response = await reserveHttp.post(
             '/content-assistant/generations',
         );
-        await refreshQuota();
+        try {
+            await refreshQuota();
+        } catch {
+            // The write succeeded; quota refresh is advisory.
+        }
         return response;
     }
 
@@ -54,7 +59,11 @@ export function useContentAssistantUsage(workspaceId?: string) {
         await completeHttp.post(
             `/content-assistant/generations/${id}/complete`,
         );
-        await refreshQuota();
+        try {
+            await refreshQuota();
+        } catch {
+            // The write succeeded; quota refresh is advisory.
+        }
     }
 
     async function release(id: string): Promise<void> {

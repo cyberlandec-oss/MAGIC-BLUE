@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 
 import {
     simulatedContentAssistant,
@@ -18,6 +18,7 @@ type Props = {
         reserve: (
             platform: string,
             brief: string,
+            idempotencyKey?: string,
         ) => Promise<{
             generation_id: string;
             provider: string;
@@ -53,6 +54,7 @@ export function ContentAssistantPanel({
     const [generationId, setGenerationId] = useState<string | null>(null);
     const [generatedBrief, setGeneratedBrief] = useState<string | null>(null);
     const [generatedDraft, setGeneratedDraft] = useState<string | null>(null);
+    const operationKey = useRef(crypto.randomUUID());
 
     async function releaseReservation(id: string): Promise<void> {
         if (!usage) {
@@ -65,6 +67,7 @@ export function ContentAssistantPanel({
             // The suggestion and draft remain untouched so the user can retry.
         } finally {
             setGenerationId(null);
+            operationKey.current = crypto.randomUUID();
         }
     }
 
@@ -81,7 +84,11 @@ export function ContentAssistantPanel({
             }
 
             try {
-                reservedId = (await usage.reserve(platform, brief))
+                reservedId = (await usage.reserve(
+                    platform,
+                    brief,
+                    operationKey.current,
+                ))
                     .generation_id;
                 setGenerationId(reservedId);
             } catch {
@@ -154,6 +161,7 @@ export function ContentAssistantPanel({
         }
 
         setSuggestion(response.text);
+        operationKey.current = crypto.randomUUID();
         setGeneratedBrief(brief);
         setGeneratedDraft(currentDraft);
         setNotice(
@@ -282,6 +290,8 @@ export function ContentAssistantPanel({
                                     value={brief}
                                     onChange={(event) => {
                                         setBrief(event.target.value);
+                                        operationKey.current =
+                                            crypto.randomUUID();
                                         setSuggestion('');
                                         setGeneratedBrief(null);
                                         setGeneratedDraft(null);
