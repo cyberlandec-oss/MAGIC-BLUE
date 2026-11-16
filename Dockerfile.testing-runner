@@ -1,0 +1,26 @@
+# syntax=docker/dockerfile:1
+
+FROM serversideup/php:8.5-frankenphp-trixie
+
+USER root
+
+RUN docker-php-serversideup-set-id www-data 9999:9999 \
+    && docker-php-serversideup-set-file-permissions --owner 9999:9999 \
+    && install-php-extensions bcmath \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /var/www/html
+
+COPY --chown=www-data:www-data composer.json composer.lock ./
+RUN COMPOSER_MAX_PARALLEL_HTTP=1 composer install --no-interaction --no-plugins --no-scripts --prefer-install=auto
+
+COPY --chown=www-data:www-data . .
+
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
+    && chown -R www-data:www-data bootstrap/cache storage
+
+USER www-data
+
+ENTRYPOINT ["/bin/sh", "-lc"]

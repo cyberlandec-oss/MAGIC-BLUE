@@ -76,6 +76,61 @@ it('expires abandoned reservations and prevents completing a released reservatio
         ->and(UsageEvent::count())->toBe($eventCount);
 });
 
+it('releases expired reservations across workspaces idempotently', function () {
+    $user = User::factory()->withWorkspace()->create();
+    $otherUser = User::factory()->withWorkspace()->create();
+    $service = app(ContentAssistantUsageService::class);
+    $first = $service->reserve($user, Platform::Facebook, 'brief', 'scheduled-expiry-one');
+    $second = $service->reserve($otherUser, Platform::Facebook, 'brief', 'scheduled-expiry-two');
+    $expiredAt = CarbonImmutable::now()->subMinutes(31);
+
+    $first->forceFill(['reserved_at' => $expiredAt])->save();
+    $second->forceFill(['reserved_at' => $expiredAt])->save();
+
+    expect($service->releaseExpiredReservations())->toBe(2)
+        ->and($service->releaseExpiredReservations())->toBe(0)
+        ->and($first->refresh()->status)->toBe('released')
+        ->and($second->refresh()->status)->toBe('released')
+        ->and(UsageEvent::count())->toBe(0);
+});
+
+it('keeps reservations at the ttl boundary and releases them after it', function () {
+    Date::setTestNow('2026-07-01 12:00:00');
+    try {
+        $user = User::factory()->withWorkspace()->create();
+        $service = app(ContentAssistantUsageService::class);
+        $generation = $service->reserve($user, Platform::Facebook, 'brief', 'ttl-boundary');
+        $generation->forceFill(['reserved_at' => CarbonImmutable::now()->subMinutes(30)])->save();
+
+        expect($service->releaseExpiredReservations($user->current_workspace_id))->toBe(0)
+            ->and($generation->refresh()->status)->toBe('reserved');
+
+        $generation->forceFill(['reserved_at' => CarbonImmutable::now()->subMinutes(30)->subSecond()])->save();
+
+        expect($service->releaseExpiredReservations($user->current_workspace_id))->toBe(1)
+            ->and($generation->refresh()->status)->toBe('released');
+    } finally {
+        Date::setTestNow();
+    }
+});
+
+it('runs the expiry command without releasing completed or recent generations', function () {
+    $user = User::factory()->withWorkspace()->create();
+    $service = app(ContentAssistantUsageService::class);
+    $recent = $service->reserve($user, Platform::Facebook, 'brief', 'recent-command');
+    $completed = $service->reserve($user, Platform::Facebook, 'brief', 'completed-command');
+    $service->complete($completed, 'suggestion');
+    $expired = $service->reserve($user, Platform::Facebook, 'brief', 'expired-command');
+    $expired->forceFill(['reserved_at' => CarbonImmutable::now()->subMinutes(31)])->save();
+
+    $this->artisan('assistant:release-expired')->assertSuccessful();
+
+    expect($recent->refresh()->status)->toBe('reserved')
+        ->and($completed->refresh()->status)->toBe('completed')
+        ->and($expired->refresh()->status)->toBe('released')
+        ->and($service->quota($user)['used'])->toBe(2);
+});
+
 it('charges a reservation to the month in which it was created', function () {
     Date::setTestNow('2026-06-30 23:59:00');
     try {

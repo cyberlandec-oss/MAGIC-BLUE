@@ -13,6 +13,7 @@ use App\Console\Commands\ReconcileSyncFanOut;
 use App\Console\Commands\ReconcileUsageCounters;
 use App\Console\Commands\RefreshCommunityStats;
 use App\Console\Commands\RefreshExpiringTokens;
+use App\Console\Commands\ReleaseExpiredAssistantReservations;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -49,6 +50,7 @@ if (config('sync.enabled')) {
 
 Schedule::command(ReconcileUsageCounters::class)->dailyAt('02:10')->withoutOverlapping();
 Schedule::command(PruneUsageEvents::class)->dailyAt('02:20');
+Schedule::command(ReleaseExpiredAssistantReservations::class)->everyFifteenMinutes()->withoutOverlapping();
 
 if (! config('subscriptions.enabled')) {
     Schedule::command(RefreshCommunityStats::class)->daily()->withoutOverlapping();

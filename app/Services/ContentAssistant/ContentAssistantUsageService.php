@@ -164,17 +164,21 @@ class ContentAssistantUsageService
         return $generation->refresh();
     }
 
-    private function releaseExpiredReservations(string $workspaceId): void
+    public function releaseExpiredReservations(?string $workspaceId = null): int
     {
-        ContentAssistantGeneration::query()
-            ->where('workspace_id', $workspaceId)
+        $query = ContentAssistantGeneration::query()
             ->where('status', 'reserved')
-            ->where('reserved_at', '<', CarbonImmutable::now()->subMinutes((int) config('assistant.reservation_ttl_minutes', 30)))
-            ->update([
-                'status' => 'released',
-                'failure_code' => 'reservation_expired',
-                'completed_at' => CarbonImmutable::now(),
-                'updated_at' => CarbonImmutable::now(),
-            ]);
+            ->where('reserved_at', '<', CarbonImmutable::now()->subMinutes((int) config('assistant.reservation_ttl_minutes', 30)));
+
+        if ($workspaceId !== null) {
+            $query->where('workspace_id', $workspaceId);
+        }
+
+        return $query->update([
+            'status' => 'released',
+            'failure_code' => 'reservation_expired',
+            'completed_at' => CarbonImmutable::now(),
+            'updated_at' => CarbonImmutable::now(),
+        ]);
     }
 }
