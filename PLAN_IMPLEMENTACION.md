@@ -1152,3 +1152,19 @@ reservas, estados completados y claves de idempotencia. La prueba de comandos
 verifica limpieza en dos workspaces y conservaciÃ³n de historial del asistente.
 No se define un plazo de eliminaciÃ³n para generaciones porque el contrato no
 lo establece; quedan como pendiente de una decisiÃ³n explÃ­cita de producto.
+
+Evidencia de QA visual del asistente simulado (entorno aislado, usuario sintÃ©tico,
+16-11-2026): aprobado el recorrido de borrador en `/dashboard` y `/posts`.
+Se verificÃ³ generaciÃ³n simulada sin proveedor externo, cuota 100→99 y luego
+99→98, ediciÃ³n de la sugerencia, confirmaciÃ³n de reemplazo y mensaje de
+aceptaciÃ³n editorial. Al cancelar el segundo reemplazo, el editor conservÃ³ el
+borrador original. Tras navegar a Posts y abrir el registro guardado, el editor
+restaurÃ³ el texto persistido y mostrÃ³ estado Saved. El botÃ³n de publicaciÃ³n
+permaneciÃ³ deshabilitado porque no habÃ­a cuentas conectadas; no se publicÃ³
+contenido ni se llamÃ³ a un proveedor real.
+
+Pendientes de QA visual: doble clic/reintento con error de red, cancelaciÃ³n de
+reserva, expiraciÃ³n visible, cambio de workspace, aislamiento con el segundo
+usuario, retenciÃ³n y pruebas de mÃ³vil/impresiÃ³n. La automatizaciÃ³n del botÃ³n
+New post/Open post necesitÃ³ una interacciÃ³n Playwright por temporizaciÃ³n; no se
+registrÃ³ un defecto de aplicaciÃ³n. No se confunde esta evidencia con el CI.
